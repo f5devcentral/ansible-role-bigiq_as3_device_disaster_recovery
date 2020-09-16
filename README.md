@@ -1,9 +1,21 @@
 # Ansible Role: bigiq_as3_device_disaster_recovery
 
-Performs a series of steps needed to move all AS3 application services from a unreachable BIG-IP that was a member of an **Active-Standby HA pair** in BIG-IQ.
-This role is meant to use in the context of an RMA (Return Merchandise Authorization). 
+Performs a series of steps needed to move all AS3 application services from BIG-IP device which needed a RMA (Return Merchandise Authorization).
 
-This role is relevant when the device which needs to be replace was the target of the AS3 deployments.
+The role is supporting RMA device that was a member of an **Active-Standby HA pair** or **Standalone** in BIG-IQ. 
+The role is relevant when the RMA device was the **target of AS3 deployments**.
+
+Steps executed by the role:
+1. Backup AS3 declarations from RMA device
+2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+3. Re-deploy the AS3 application services on the new target device (no service impact)
+
+Actions to perform before or after the role is used (depending on when the RMA device was replaced):
+- Once the AS3 application services have been re-deployed to the ``new_as3_target``, you can now remove the RMA device (``current_as3_target``) from BIG-IQ (remove all services first).
+- Once ``current_as3_target`` is removed from BIG-IQ, you can add it back after the device has been replaced and USC backup restored.
+- Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair.
+
+Note the Analytics history on BIG-IQ for this device won't be lost.
 
 ## Role Variables
 
@@ -21,14 +33,16 @@ for the **CM BIG-IQ** device.
           loginProviderName: tmos
           validate_certs: no
 
-Define the variables to move all AS3 application services from the unreable BIG-IP to the remaining active BIG-IP device.
-Both ``current_as3_target`` and ``new_as3_target`` must be in the same **Active-Standby HA pair**.
+- RMA device is part of a BIG-IP **Active-Standby HA pair**: ``current_as3_target`` and ``new_as3_target`` must be pat of the same Cluster in BIG-IQ.
+- RMA device is a **Standalone** BIG-IP: ``current_as3_target`` and ``new_as3_target`` can be the same or different IP.
 
       # Working directory to store backup files on your local machine
       dir_as3: ~/tmp
 
-      current_as3_target: 10.1.1.7 # BIG-IP device which needs the RMA
-      new_as3_target: 10.1.1.8 # active BIG-IP device
+      current_as3_target: 10.1.1.7 # RMA device
+      new_as3_target: 10.1.1.8 # new AS3 target
+
+      standalone: false # Set to true if RMA device is a standalone device
 
 ## Example Playbook
 
@@ -53,12 +67,6 @@ Both ``current_as3_target`` and ``new_as3_target`` must be in the same **Active-
               current_as3_target: 10.1.1.7
               new_as3_target: 10.1.1.8
             register: status
-
-Actions to perform after the playbook is executed successfully:
-- Once the AS3 application services have been re-deployed to the ``new_as3_target``, you can now remove the unreachable 
-device which needs an RMA (``current_as3_target``) from BIG-IQ (remove all services first).
-- Once ``current_as3_target`` is removed from BIG-IQ, you can add the new BIG-IP replacing it.
-- Make sure you add it to the existing BIG-IP cluster in BIG-IQ.
 
 ## License
 

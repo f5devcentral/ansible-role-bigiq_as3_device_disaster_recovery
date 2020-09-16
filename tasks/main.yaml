@@ -60,6 +60,21 @@
 
 - name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
   include_tasks: "check-bigip-in-same-cluster.yaml"
+  when: not standalone
+
+- name: Confirm proceed if RMA device is standalone
+  pause:
+    prompt: "\n- Confirm the RMA device {{ current_as3_target }} has been replaced and USC backup restored.
+             \n\nDo you want to proceed? (yes/no)"
+  register: confirm_standalone
+  when: 
+    - standalone
+
+- fail:
+    msg: "Please, replace & restore RMA device before using this role."
+  when: 
+    - standalone
+    - not confirm_standalone.user_input | bool
 
 - name: Backup device's AS3 declarations
   include_tasks: "backup-as3.yaml"
@@ -67,28 +82,49 @@
 - name: Get app services details to cleanup
   include_tasks: "cleanup-get-apps-details.yaml"
 
-- name: Confirm deletion
+- name: Step 1 - Confirm Apps deletion from current_as3_target
   pause:
-    prompt: "\n- Confirm the device {{ current_as3_target }} is unreachable.
-             \n- ALL AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.\n
-               (apps won't be deleted on the BIG-IP but only on BIG-IQ)\n\n
-             Do you want to proceed? (yes/no)"
-  register: confirm_delete
+    prompt: "\n- Confirm the RMA device is {{ current_as3_target }} and {{ new_as3_target }} device ready to be used.
+             \n- All AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.
+             \n (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+             \n\nDo you want to proceed? (yes/no)"
+  register: confirm_proceed
+
+- fail:
+    msg: "Please, delete first the Apps on BIG-IQ dashboard."
+  when:  not confirm_proceed.user_input | bool
 
 - name: Force-Delete Application Services in {{ current_as3_target }}
   include_tasks: "cleanup-apps-unreachable.yaml"
   with_items: "{{ configSets }}"
   loop_control:
     loop_var: item1
-  when: confirm_delete.user_input | bool
+  when: confirm_proceed.user_input | bool
 
-- name: Confirm deployment to the new_as3_target
+- name: Make a backup file of {{ dir_as3 }}/{{ new_as3_target }}
+  copy:
+    src: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+    dest: "{{ dir_as3 }}/{{ new_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: 
+    - standalone
+    - confirm_proceed.user_input | bool
+
+- name: Confirm proceed if RMA device is standalone
   pause:
-    prompt: "\n- Confirm the device {{ new_as3_target }} is the new active BIG-IP.
-             \n- Re-deployment of the AS3 application services to the new target {{ new_as3_target }}.\n
-               (as we are re-posting the same AS3 declations, there should be no impact on current)\n\n
-             Do you want to proceed? (yes/no)"
-  register: confirm_deploy
+    prompt: "\n- Now, remove {{ current_as3_target }} from BIG-IQ and add it back (discover & import {{ new_as3_target }}).
+             \n (a backup of the original AS3 declaration from RMA device has been saved in 
+             \n{{ dir_as3 }}/{{ new_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}).
+             \n\nHit any key to continue"
+  when: 
+    - standalone
+    - confirm_proceed.user_input | bool
+
+- name: Step 2 - Confirm Apps deployment to the new_as3_target - Standalone
+  pause:
+    prompt: "\n- Confirm the device {{ new_as3_target }} is the correct new target device.
+             \n- This step will redeploy the AS3 application services to the new target {{ new_as3_target }} (no service impact).
+             \n\nHit any key to continue"
+  register: ignore_confirm
 
 # Post AS3 declaration to new device using atc_deploy
 - name: ATC POST - create new {{ new_as3_target }}
@@ -101,19 +137,20 @@
     atc_delay: 15
     atc_retries: 30
   register: atc_AS3_status
-  when: confirm_deploy.user_input | bool
+  when: confirm_proceed.user_input | bool
 
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
   include_tasks: "move-app-services.yaml"
   with_items: "{{ configSets }}"
   loop_control:
     loop_var: item2
-  when: confirm_delete.user_input | bool
+  when: confirm_proceed.user_input | bool
 
-- name: Next step RMA
+- name: Next steps...
   debug:
     msg: 
-      - "You can now remove the unreachable device which needs an RMA ({{ current_as3_target }}) from BIG-IQ (remove all services first)"
-      - "Once {{ current_as3_target }} is removed from BIG-IQ, you can add the new BIG-IP replacing it."
-      - "Make sure you add it to the existing BIG-IP cluster in BIG-IQ."
-  when: confirm_deploy.user_input | bool
+      - "Actions to perform before or after the role is used (depending on when the RMA device was replaced):"
+      - "Once the AS3 application services have been re-deployed to the {{ new_as3_target }}, you can now remove the RMA device {{ current_as3_target }} from BIG-IQ (remove all services first)."
+      - "Once {{ current_as3_target }} is removed from BIG-IQ, you can add it back after the device has been replaced and USC backup restored."
+      - "Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair."
+  when: confirm_proceed.user_input | bool

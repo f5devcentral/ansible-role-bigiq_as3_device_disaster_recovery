@@ -19,12 +19,19 @@
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
     status_code: 200, 202
-  register: json_response
+  register: json_response2
 
-- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json
-  local_action: copy content={{ json_response | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}.json"
+# More than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json - More than 1 device
+  local_action: copy content={{ json_response2 | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}.json"
   vars:
     query: "json[?target.address=='{{ current_as3_target }}']"
+  when: json_response2.json.class is not defined
+
+# 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json - 1 device
+  local_action: copy content={{ json_response2.json | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}.json"
+  when: json_response2.json.class is defined
 
 - name: Make a copy of previous file to {{ dir_as3 }}/{{ current_as3_target }}
   copy:
