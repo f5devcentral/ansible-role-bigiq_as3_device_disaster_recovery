@@ -1,0 +1,17 @@
+---
+dependencies: []
+
+galaxy_info:
+  role_name: bigiq_as3_device_disaster_recovery
+  author: rjouhann
+  description: Move all AS3 Application Service(s) from a BIG-IP device which needs an RMA to the new active device.
+  company: F5 Networks
+  license: Apache
+  min_ansible_version: 2.7
+  platforms:
+    - name: TMOS
+      versions:
+        - all
+  galaxy_tags:
+    - f5
+    - bigiq

@@ -1,0 +1,44 @@
+---
+- name: Show device from where to backup the A3 declarations
+  debug:
+    msg: "Backup all AS3 declarations from {{ current_as3_target }}"
+
+- name: Create a directory if it does not exist where we will store the AS3 declaration
+  file:
+    path: "{{ dir_as3 }}"
+    state: directory
+    mode: '0755'
+
+# Retrieve AS3 declarations in Tenant
+- name: Get All AS3 declaration from BIG-IQ
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/appsvcs/declare
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response
+
+- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json
+  local_action: copy content={{ json_response | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}.json"
+  vars:
+    query: "json[?target.address=='{{ current_as3_target }}']"
+
+- name: Make a copy of previous file to {{ dir_as3 }}/{{ current_as3_target }}
+  copy:
+    src: "{{ dir_as3 }}/{{ current_as3_target }}.json"
+    dest: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+
+- name: Remove BIG-IQ id
+  lineinfile: 
+    dest: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+    state: absent 
+    regexp: '^    "id":'
+
+- name: Replace target BIG-IP with new target {{ new_as3_target }}
+  lineinfile:
+    path: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+    regexp: '^        "address":'
+    line: '        "address": "{{ new_as3_target }}"'

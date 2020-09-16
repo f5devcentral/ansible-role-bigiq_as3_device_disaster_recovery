@@ -1,0 +1,33 @@
+---
+# Force Delete ALL apps within tenant_to_migrate (old tenant)
+- name: Force-Delete App services in case device in not reachable
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/force-delete"
+    method: POST
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      Content-Type: application/json
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    body: |
+      {
+          "configSetName": "{{ item }}"
+      }
+    body_format: json
+    status_code: 202
+  register: json_response
+
+- name: Check Force-Delete status
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/force-delete/{{ json_response.json.id }}"
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      Content-Type: application/json
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: status
+  until: status.json.status in ['FINISHED', 'FAILED']
+  retries: 40
+  delay: 10
+  failed_when: "'FAILED' in status.json.status"
+  changed_when: "'FINISHED' in status.json.status"

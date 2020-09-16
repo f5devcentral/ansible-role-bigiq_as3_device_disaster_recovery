@@ -1,0 +1,37 @@
+---
+- name: Get machineId of the device
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ current_as3_target }}...{{ current_as3_target }}'"
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: json_response
+
+- name: Get the machineId of the specified BIG-IP
+  set_fact:
+    machineId: "{{ json_response | json_query(query) | join(' ') }}"
+  vars: 
+    query: "json.items[?address=='{{ current_as3_target }}'].machineId"
+
+- name: Get app services name (configSetName) in the device specified {{ current_as3_target }}
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/config-sets?$filter=deviceReference.link%20eq%20'https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machineId }}'
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response
+
+- name: Get configSetName in {{ current_as3_target }}
+  set_fact:
+    configSetNames: "{{ json_response | json_query(query) }}"
+  vars: 
+    query: "json.items[*].configSetName"
+
+- name: Application Services which will be deleted
+  debug:
+    msg: "{{ configSetNames }}"

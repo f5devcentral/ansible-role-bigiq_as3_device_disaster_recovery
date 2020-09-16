@@ -1,0 +1,99 @@
+---
+- name: Setup provider and varables
+  set_fact:
+    provider: "{{ provider }}"
+
+- name: Get authentication token
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/authn/login"
+    method: POST
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    body:
+      username: "{{ provider.user }}"
+      password: "{{ provider.password }}"
+      loginProviderName: "{{ provider.loginProviderName }}"
+    body_format: json
+  register: authtoken
+
+- name: Set the token fact if authentication succeeded
+  set_fact:
+    f5_auth_token: "{{ authtoken.json.token.token }}"
+  when: authtoken is success
+
+- name: Test authentication
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/echo"
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: status
+
+- name: Get device provisioning type
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/provisioning"
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: rprov
+
+- name: Fail if you're running the role against a DCD device
+  fail:
+    msg: "This role should be run against a CM device, but you appear to be running it against a DCD device"
+  when: rprov.json.systemPersonality == 'logging_node'
+
+- name: Check if system is setup
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/system/setup"
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: setupchk
+
+- name: Stop if the system is not setup
+  fail:
+    msg: "The CM device has not been setup. Please onboard the DCD device first."
+  when: setupchk.json.isSystemSetup is not defined or not setupchk.json.isSystemSetup|bool
+
+- name: Backup device's AS3 declarations
+  include_tasks: "backup-as3.yaml"
+
+- name: Get app services details to cleanup
+  include_tasks: "cleanup-get-apps-details.yaml"
+
+- name: Confirm deletion
+  pause:
+    prompt: "\n- Confirm the device {{ current_as3_target }} is unreachable.
+             \n- ALL AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.
+             \n  (apps won't be deleted on the BIG-IP but only on BIG-IQ)\n\n
+             Do you want to proceed? (yes/no)"
+  register: confirm_delete
+
+- name: Force-Delete Application Services in {{ current_as3_target }}
+  include_tasks: "cleanup-apps-unreachable.yaml"
+  with_items: "{{ configSetNames }}"
+  loop_control:
+    loop_var: item
+  when: confirm_delete.user_input | bool
+
+- name: Confirm deployment to the new_as3_target
+  pause:
+    prompt: "\n- Confirm the device {{ new_as3_target }} is the new active BIG-IP.
+             \n- Re-deployment of the AS3 application services to the new target {{ new_as3_target }}.\n\n
+             Do you want to proceed? (yes/no)"
+  register: confirm_deploy
+
+- name: Deploy AS3 declaration to new_as3_target
+  include_tasks: "deploy_as3.yaml"
+  when: confirm_deploy.user_input | bool
+
+- name: Next step RMA
+  debug:
+    msg: 
+      - "You can now remove the unreachable device which needs an RMA ({{ current_as3_target }}) from BIG-IQ (remove all services first)"
+      - "Once {{ current_as3_target }} is removed from BIG-IQ, you can add the new BIG-IP replacing it."
+      - "Make sure you add it to the existing BIG-IP cluster in BIG-IQ."
+  when: confirm_deploy.user_input | bool
