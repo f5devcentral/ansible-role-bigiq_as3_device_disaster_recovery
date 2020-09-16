@@ -1,7 +1,9 @@
 # Ansible Role: bigiq_as3_device_disaster_recovery
 
-Performs a series of steps needed to move all AS3 Application Service(s) from a BIG-IP device 
-which needs an RMA (Return Merchandise Authorization) to the active device serving the traffic.
+Performs a series of steps needed to move all AS3 application services from a unreachable BIG-IP that was a member of an Active-Standby HA pair in BIG-IQ.
+This role is meant to use in the context of an RMA (Return Merchandise Authorization). 
+
+This role is relevant when the device which needs to be replace was the target of the AS3 deployments. 
 
 ## Role Variables
 
