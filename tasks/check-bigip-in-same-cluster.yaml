@@ -1,0 +1,42 @@
+---
+- name: Get details for device {{ current_as3_target }}
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ current_as3_target }}...{{ current_as3_target }}'"
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: json_response
+
+- name: Get the clusterName for {{ current_as3_target }}
+  set_fact:
+    clusterName_device1: "{{ json_response | json_query(query) | join(' ') }}"
+  vars: 
+    query: "json.items[?address=='{{ current_as3_target }}'].properties.clusterName"
+
+- debug:
+    var: clusterName_device1
+
+- name: Get details for device {{ new_as3_target }}
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ new_as3_target }}...{{ new_as3_target }}'"
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: json_response
+
+- name: Get the clusterName for {{ new_as3_target }}
+  set_fact:
+    clusterName_device2: "{{ json_response | json_query(query) | join(' ') }}"
+  vars: 
+    query: "json.items[?address=='{{ new_as3_target }}'].properties.clusterName"
+
+- debug:
+    var: clusterName_device2
+
+- fail:
+    msg: "{{ current_as3_target }} must be in the same cluster on BIG-IQ as {{ new_as3_target }}"
+  when:  clusterName_device1 != clusterName_device2

@@ -58,7 +58,8 @@
     msg: "The CM device has not been setup. Please onboard the DCD device first."
   when: setupchk.json.isSystemSetup is not defined or not setupchk.json.isSystemSetup|bool
 
-## Add check both devices are part of the same BIG-IP cluster so all referenced objects and AS3 declaration are sync between the 2 devices
+- name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
+  include_tasks: "check-bigip-in-same-cluster.yaml"
 
 - name: Backup device's AS3 declarations
   include_tasks: "backup-as3.yaml"
