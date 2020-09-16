@@ -3,7 +3,7 @@
 Performs a series of steps needed to move all AS3 application services from a unreachable BIG-IP that was a member of an Active-Standby HA pair in BIG-IQ.
 This role is meant to use in the context of an RMA (Return Merchandise Authorization). 
 
-This role is relevant when the device which needs to be replace was the target of the AS3 deployments. 
+This role is relevant when the device which needs to be replace was the target of the AS3 deployments.
 
 ## Role Variables
 
@@ -21,7 +21,8 @@ for the **CM BIG-IQ** device.
           loginProviderName: tmos
           validate_certs: no
 
-Define the variables to move all AS3 application services from to the active BIG-IP device.
+Define the variables to move all AS3 application services from the unreable BIG-IP to the remaining active BIG-IP device.
+Both ``current_as3_target`` and ``new_as3_target`` must be in the same Active-Standby HA pair.
 
       # Working directory to store backup files on your local machine
       dir_as3: ~/tmp
