@@ -4,7 +4,7 @@ dependencies: []
 galaxy_info:
   role_name: bigiq_as3_device_disaster_recovery
   author: rjouhann
-  description: Move all AS3 Application Service(s) from a BIG-IP device which needs an RMA to the new active device.
+  description: Move all AS3 application services from a unreachable BIG-IP that was a member of an Active-Standby HA pair in BIG-IQ.
   company: F5 Networks
   license: Apache
   min_ansible_version: 2.7
