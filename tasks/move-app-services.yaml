@@ -1,0 +1,27 @@
+---
+# Find out Global App name
+- name: Get global App name from applicationReference
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item2.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response
+
+- name: Show Apps Services to be moved
+  debug:
+    msg: "{{ item2.configSetName }} moved to {{ json_response.json.name }} "
+
+# Move item in Global App name
+- name: Move AS3 application service(s) in BIG-IQ application dashboard.
+  include_role:
+    name: f5devcentral.bigiq_move_app_dashboard
+  vars:
+      apps: 
+      - name: "{{ json_response.json.name }}"
+        pins: 
+          - name: "{{ item2.configSetName }}"
+  register: status

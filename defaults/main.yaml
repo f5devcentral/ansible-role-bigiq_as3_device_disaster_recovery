@@ -6,5 +6,3 @@ dir_as3: ~/tmp # Working directory to store migration files on your local machin
 
 current_as3_target: 10.1.1.7 # device which needs the RMA
 new_as3_target: 10.1.1.8 # new active device
-
-new_bigiq_app_name: "App Services moved to new target"

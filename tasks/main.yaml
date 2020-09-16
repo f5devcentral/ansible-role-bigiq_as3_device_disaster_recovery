@@ -67,28 +67,45 @@
 - name: Confirm deletion
   pause:
     prompt: "\n- Confirm the device {{ current_as3_target }} is unreachable.
-             \n- ALL AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.
-             \n  (apps won't be deleted on the BIG-IP but only on BIG-IQ)\n\n
+             \n- ALL AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.\n
+               (apps won't be deleted on the BIG-IP but only on BIG-IQ)\n\n
              Do you want to proceed? (yes/no)"
   register: confirm_delete
 
 - name: Force-Delete Application Services in {{ current_as3_target }}
   include_tasks: "cleanup-apps-unreachable.yaml"
-  with_items: "{{ configSetNames }}"
+  with_items: "{{ configSets }}"
   loop_control:
-    loop_var: item
+    loop_var: item1
   when: confirm_delete.user_input | bool
 
 - name: Confirm deployment to the new_as3_target
   pause:
     prompt: "\n- Confirm the device {{ new_as3_target }} is the new active BIG-IP.
-             \n- Re-deployment of the AS3 application services to the new target {{ new_as3_target }}.\n\n
+             \n- Re-deployment of the AS3 application services to the new target {{ new_as3_target }}.\n
+               (as we are re-posting the same AS3 declations, there should be no impact on current)\n\n
              Do you want to proceed? (yes/no)"
   register: confirm_deploy
 
-- name: Deploy AS3 declaration to new_as3_target
-  include_tasks: "deploy_as3.yaml"
+# Post AS3 declaration to new device using atc_deploy
+- name: ATC POST - create new {{ new_as3_target }}
+  include_role:
+    name: f5devcentral.atc_deploy
+  vars:
+    atc_service: AS3
+    atc_method: POST
+    atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+    atc_delay: 15
+    atc_retries: 30
+  register: atc_AS3_status
   when: confirm_deploy.user_input | bool
+
+- name: Move AS3 application service(s) in BIG-IQ application dashboard.
+  include_tasks: "move-app-services.yaml"
+  with_items: "{{ configSets }}"
+  loop_control:
+    loop_var: item2
+  when: confirm_delete.user_input | bool
 
 - name: Next step RMA
   debug:

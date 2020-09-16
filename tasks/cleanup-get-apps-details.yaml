@@ -26,12 +26,15 @@
     status_code: 200, 202
   register: json_response
 
-- name: Get configSetName in {{ current_as3_target }}
+- name: Get config-sets for {{ current_as3_target }}
   set_fact:
-    configSetNames: "{{ json_response | json_query(query) }}"
+    configSets: "{{ json_response | json_query(query) }}"
   vars: 
-    query: "json.items[*].configSetName"
+    query: "json.items[*]"
 
-- name: Application Services which will be deleted
-  debug:
-    msg: "{{ configSetNames }}"
+#- name: Get configSetName and applicationReference in config-sets
+#  debug:
+#    msg: "{{ item3.configSetName }} located in {{ item3.applicationReference }} (Global app reference)"
+#  with_items: "{{ configSets }}"
+#  loop_control:
+#    loop_var: item3

@@ -29,9 +29,6 @@ Define the variables to move all AS3 application services from to the active BIG
       current_as3_target: 10.1.1.7 # BIG-IP device which needs the RMA
       new_as3_target: 10.1.1.8 # active BIG-IP device
 
-      # Name of the Application in BIG-IQ Dashboard which will contain the App Services after moving them to the new_as3_target
-      new_bigiq_app_name: "App Services moved to new target"
-
 ## Example Playbook
 
     ---
@@ -54,7 +51,6 @@ Define the variables to move all AS3 application services from to the active BIG
               dir_as3: ~/tmp
               current_as3_target: 10.1.1.7
               new_as3_target: 10.1.1.8
-              new_bigiq_app_name: "App Services moved to new target"
             register: status
 
 Actions to perform after the playbook is executed successfully:
