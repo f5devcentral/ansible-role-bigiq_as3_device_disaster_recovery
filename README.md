@@ -55,6 +55,12 @@ Define the variables to move all AS3 application services from to the active BIG
               new_bigiq_app_name: "App Services moved to new target"
             register: status
 
+Action after the playbook is executed successfully:
+- Once the AS3 application services have been re-deployed to the ``new_as3_target``, you can now remove the unreachable 
+device which needs an RMA (``current_as3_target``) from BIG-IQ (remove all services first).
+- Once ``current_as3_target`` is removed from BIG-IQ, you can add the new BIG-IP replacing it.
+- Make sure you add it to the existing BIG-IP cluster in BIG-IQ.
+
 ## License
 
 Apache
