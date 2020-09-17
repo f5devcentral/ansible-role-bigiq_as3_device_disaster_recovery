@@ -12,7 +12,7 @@ Steps executed by the role:
 
 Actions to perform before or after the role is used (depending on when the RMA device was replaced):
 - Once the AS3 application services have been re-deployed to the ``new_as3_target``, you can now remove the RMA device (``current_as3_target``) from BIG-IQ (remove all services first).
-- Once ``current_as3_target`` is removed from BIG-IQ, you can add it back after the device has been replaced and USC backup restored.
+- Once ``current_as3_target`` is removed from BIG-IQ, you can add it back after the device has been replaced and UCS backup restored.
 - Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair.
 
 Note the Analytics history on BIG-IQ for this device won't be lost.
@@ -33,7 +33,7 @@ for the **CM BIG-IQ** device.
           loginProviderName: tmos
           validate_certs: no
 
-- RMA device is part of a BIG-IP **Active-Standby HA pair**: ``current_as3_target`` and ``new_as3_target`` must be pat of the same Cluster in BIG-IQ.
+- RMA device is part of a BIG-IP **Active-Standby HA pair**: ``current_as3_target`` and ``new_as3_target`` must be part of the same Cluster in BIG-IQ.
 - RMA device is a **Standalone** BIG-IP: ``current_as3_target`` and ``new_as3_target`` can be the same or different IP.
 
       # Working directory to store backup files on your local machine
