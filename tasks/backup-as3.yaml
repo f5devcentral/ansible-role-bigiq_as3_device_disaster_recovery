@@ -21,6 +21,17 @@
     status_code: 200, 202
   register: json_response2
 
+- name: Check that the {{ dir_as3 }}/{{ current_as3_target }}.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ current_as3_target }}.json"
+  register: file_exist
+
+- name: Backup the file is it exist already (in case of launching the module multiple times with failure)
+  copy:
+    src: "{{ dir_as3 }}/{{ current_as3_target }}.json"
+    dest: "{{ dir_as3 }}/{{ current_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist.stat.exists
+
 # More than 1 device
 - name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json - More than 1 device
   local_action: copy content={{ json_response2 | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}.json"

@@ -1,0 +1,35 @@
+---
+# Get device under Pinning Policy
+- name: Get existing objects pinned on the device - LTM only
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node?$filter=deviceReference.machineId%20eq%20'{{ machine_id }}'"
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: json_response
+
+- name: Get the ID of the Device under Pinning Policy - LTM only
+  set_fact:
+    object_pinning_id: "{{ json_response | json_query(query) }}"
+  vars: 
+    query: "json.items[0].id"
+
+- name: Delete all sslCertReferences and sslKeyReferences pinned on {{ current_as3_target }} and {{ new_as3_target }} 
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node/{{ object_pinning_id }}"
+    method: PATCH
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      Content-Type: application/json
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    body: |
+      {
+        "id": "{{ object_pinning_id }}",
+        "sslCertReferences": [],
+        "sslKeyReferences": []
+      }
+    body_format: json
+  register: json_response

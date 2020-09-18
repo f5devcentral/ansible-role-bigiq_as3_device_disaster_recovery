@@ -10,10 +10,16 @@ Steps executed by the role:
 2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
 3. Re-deploy the AS3 application services on the new target device (no service impact)
 
-Actions to perform before or after the role is used (depending on when the RMA device was replaced):
+**CAUTION**
+This role does NOT save the Application Services **Custom Application Roles** assigned to a user or groups of users for the applications hosted on the RMA device. You may not use this role if you are in this case. If you are interested to support the user/application roles relation [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
+
+**Actions to perform after the role is used:**
 - Once the AS3 application services have been re-deployed to the ``new_as3_target``, you can now remove the RMA device (``current_as3_target``) from BIG-IQ (remove all services first).
 - Once ``current_as3_target`` is removed from BIG-IQ, you can add it back after the device has been replaced and UCS backup restored.
 - Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair.
+- Make sure sure you Re-Discover & Re-import ALL the modules for ``current_as3_target`` and `new_as3_target`` once RMA device replaced.
+  (Conflict Resolution Policy: Use BIG-IP for Device Object Conflict)
+- If you had users assigned to the AS3 application services in in ``current_as3_target``, you will need to re-assign the application services roles to those users.
 
 Note the Analytics history on BIG-IQ for this device won't be lost.
 

@@ -87,6 +87,7 @@
     prompt: "\n- Confirm the RMA device is {{ current_as3_target }} and {{ new_as3_target }} device ready to be used.
              \n- All AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.
              \n (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+             \n- All app services custom roles will be removed in BIG-IQ and you will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
   register: confirm_proceed
 
@@ -94,11 +95,26 @@
     msg: "Please, delete first the Apps on BIG-IQ dashboard."
   when:  not confirm_proceed.user_input | bool
 
-- name: Force-Delete Application Services in {{ current_as3_target }}
-  include_tasks: "cleanup-apps-unreachable.yaml"
-  with_items: "{{ configSets }}"
-  loop_control:
-    loop_var: item1
+- name: Handle errors with pin objects
+  block:
+  - name: Force-Delete Application Services in {{ current_as3_target }}
+    include_tasks: "cleanup-apps-RMA-device.yaml"
+    with_items: "{{ configSets }}"
+    loop_control:
+      loop_var: item1
+  rescue:
+  # BIQPROJ-26703
+  - name: Unpin slCertReferences and sslKeyReferences LTM objects from {{ current_as3_target }} and {{ new_as3_target }} 
+    include_tasks: "cleanup-bigiq-pinned-objects-RMA-device.yaml"
+    # After un-pin those objects, force-delete should work on remaining AS3 app
+  - name: Force-Delete Application Services in {{ current_as3_target }}
+    include_tasks: "cleanup-apps-RMA-device.yaml"
+    with_items: "{{ configSets }}"
+    loop_control:
+      loop_var: item1
+  - name: set variable to use to display additional warning at the end about the need of re-discover & re-import the devices after
+    set_fact:
+      warning: true
   when: confirm_proceed.user_input | bool
 
 - name: Make a backup file of {{ dir_as3 }}/{{ new_as3_target }}
@@ -149,8 +165,18 @@
 - name: Next steps...
   debug:
     msg: 
-      - "Actions to perform before or after the role is used (depending on when the RMA device was replaced):"
-      - "Once the AS3 application services have been re-deployed to the {{ new_as3_target }}, you can now remove the RMA device {{ current_as3_target }} from BIG-IQ (remove all services first)."
-      - "Once {{ current_as3_target }} is removed from BIG-IQ, you can add it back after the device has been replaced and UCS backup restored."
-      - "Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair."
+      - "Actions to perform after the role is used:"
+      - "- Once the AS3 application services have been re-deployed to the {{ new_as3_target }}, you can now remove the RMA device {{ current_as3_target }} from BIG-IQ (remove all services first)."
+      - "- Once {{ current_as3_target }} is removed from BIG-IQ, you can add it back after the device has been replaced and UCS backup restored."
+      - "- Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair."    
+      - "- Make sure sure you Re-Discover & Re-import ALL the modules for {{ current_as3_target }} and {{ new_as3_target }} once RMA device replaced."
+      - "(Conflict Resolution Policy: Use BIG-IP for Device Object Conflict)"
+      - "- If you had users assigned to the AS3 application services in {{ current_as3_target }}, you will need to re-assign the application services roles to those users."
   when: confirm_proceed.user_input | bool
+
+- name: Additional warning...
+  debug:
+    msg: 
+      - "WARNING: The SSL certs and keys have been unpinned from the devices {{ current_as3_target }} and {{ new_as3_target }} in BIG-IQ."
+      - "Make sure sure you Re-Discover & Re-import ALL the modules for {{ current_as3_target }} and {{ new_as3_target }} once RMA device replaced."
+  when: warning is defined

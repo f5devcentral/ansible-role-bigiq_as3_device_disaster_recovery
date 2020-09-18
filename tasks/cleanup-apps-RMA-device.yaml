@@ -1,6 +1,23 @@
 ---
-# Force Delete ALL apps within tenant_to_migrate (old tenant)
-- name: Force-Delete App services in case device in not reachable - {{ item1.configSetName }}
+
+- name: Check if configSetName exist
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/config-sets?$filter=configSetName%20eq%20'{{ item1.configSetName }}'
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response
+
+- name: Check if configSetName exist
+  set_fact:
+    configSetName_exist: "{{ json_response | json_query(query) }}"
+  vars: 
+    query: "json.items[0].configSetName"
+
+- name: Force-Delete App services - {{ item1.configSetName }}
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/force-delete"
     method: POST
@@ -16,6 +33,7 @@
     body_format: json
     status_code: 202
   register: json_response
+  when: configSetName_exist | length > 0
 
 - name: Check Force-Delete status
   uri:
@@ -31,3 +49,4 @@
   delay: 10
   failed_when: "'FAILED' in status.json.status"
   changed_when: "'FINISHED' in status.json.status"
+  when: configSetName_exist | length > 0
