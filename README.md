@@ -65,7 +65,7 @@ for the **CM BIG-IQ** device.
           validate_certs: no
 
       tasks:
-          - name: Move all AS3 application services from a unreachable BIG-IP that was a member of an Active-Standby HA pair in BIG-IQ
+          - name: Move all AS3 application services from BIG-IP device which needed a RMA
             include_role:
               name: f5devcentral.bigiq_as3_device_disaster_recovery
             vars:
