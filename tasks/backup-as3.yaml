@@ -21,6 +21,7 @@
     status_code: 200, 202
   register: json_response2
 
+# Backup current_as3_target AS3 declarations
 - name: Check that the {{ dir_as3 }}/{{ current_as3_target }}.json exists
   stat:
     path: "{{ dir_as3 }}/{{ current_as3_target }}.json"
@@ -31,6 +32,20 @@
     src: "{{ dir_as3 }}/{{ current_as3_target }}.json"
     dest: "{{ dir_as3 }}/{{ current_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}"
   when: file_exist.stat.exists
+
+# Backup ALL AS3 declaration
+- name: Check that the {{ dir_as3 }}/backup_all_as3_bigiq.json exists
+  stat:
+    path: "{{ dir_as3 }}/backup_all_as3_bigiq.json"
+  register: file_exist_all
+
+- name: Save output in a file ALL declarations stored on BIG-IQ
+  local_action: copy content={{ json_response2.json | to_nice_json }} dest="{{ dir_as3 }}/backup_all_as3_bigiq.json"
+  when: not file_exist_all.stat.exists
+
+- name: Backup the file is it exist already 
+  local_action: copy content={{ json_response2.json | to_nice_json }} dest="{{ dir_as3 }}/backup_all_as3_bigiq.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_all.stat.exists
 
 # More than 1 device
 - name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}.json - More than 1 device

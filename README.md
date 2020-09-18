@@ -23,6 +23,12 @@ This role does NOT save the Application Services **Custom Application Roles** as
 
 Note the Analytics history on BIG-IQ for this device won't be lost.
 
+# Prerequisites
+
+- Install following galaxy roles before using this role:
+  - ansible-galaxy install f5devcentral.atc_deploy
+  - ansible-galaxy install f5devcentral.bigiq_move_app_dashboard
+
 ## Role Variables
 
 Available variables are listed below. For their default values, see `defaults/main.yml`.

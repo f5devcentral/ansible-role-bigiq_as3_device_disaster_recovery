@@ -1,5 +1,7 @@
 ---
-dependencies: []
+dependencies: :
+  - role: f5devcentral.atc_deploy
+  - role: f5devcentral.bigiq_move_app_dashboard
 
 galaxy_info:
   role_name: bigiq_as3_device_disaster_recovery
