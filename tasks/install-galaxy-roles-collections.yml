@@ -1,0 +1,16 @@
+---
+- name: Install role from Ansible Galaxy atc_deploy
+  command: ansible-galaxy install f5devcentral.atc_deploy --force
+
+- name: Install role from Ansible Galaxy bigiq_move_app_dashboard
+  command: ansible-galaxy install f5devcentral.bigiq_move_app_dashboard --force
+
+- name: show downloaded roles
+  command: ansible-galaxy list
+  register: galaxy
+
+- debug:
+    var: galaxy
+
+- name: Install Collection from Ansible Galaxy
+  command: ansible-galaxy collection install f5networks.f5_modules --force

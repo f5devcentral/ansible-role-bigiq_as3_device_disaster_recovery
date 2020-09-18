@@ -15,7 +15,7 @@
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/appsvcs/declare
     method: GET
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
     status_code: 200, 202

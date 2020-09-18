@@ -1,5 +1,4 @@
 ---
-validate_certs: false
 timeout: 120
 
 dir_as3: ~/tmp # Working directory to store migration files on your local machine

@@ -5,7 +5,7 @@
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node?$filter=deviceReference.machineId%20eq%20'{{ machine_id }}'"
     method: GET
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: json_response
@@ -21,7 +21,7 @@
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node/{{ object_pinning_id }}"
     method: PATCH
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"certs }}"
     headers:
       Content-Type: application/json
       X-F5-Auth-Token: "{{ f5_auth_token }}"

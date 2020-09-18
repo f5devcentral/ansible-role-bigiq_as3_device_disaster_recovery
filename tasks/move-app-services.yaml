@@ -1,11 +1,32 @@
 ---
 # Find out Global App name
+
+######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
+- name: Get authentication token
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/authn/login"
+    method: POST
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    body:
+      username: "{{ provider.user }}"
+      password: "{{ provider.password }}"
+      loginProviderName: "{{ provider.auth_provider }}"
+    body_format: json
+  register: authtoken
+
+- name: Set the token fact if authentication succeeded
+  set_fact:
+    f5_auth_token: "{{ authtoken.json.token.token }}"
+  when: authtoken is success
+######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
+
 - name: Get global App name from applicationReference
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item2.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
     method: GET
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
     status_code: 200, 202

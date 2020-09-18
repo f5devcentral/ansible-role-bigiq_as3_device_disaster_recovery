@@ -3,16 +3,19 @@
   set_fact:
     provider: "{{ provider }}"
 
+- name: Install Galaxy roles and conditions
+  include_tasks: install-galaxy-roles-collections.yml
+
 - name: Get authentication token
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/authn/login"
     method: POST
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     body:
       username: "{{ provider.user }}"
       password: "{{ provider.password }}"
-      loginProviderName: "{{ provider.loginProviderName }}"
+      loginProviderName: "{{ provider.auth_provider }}"
     body_format: json
   register: authtoken
 
@@ -25,7 +28,7 @@
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/echo"
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: status
@@ -34,7 +37,7 @@
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/provisioning"
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: rprov
@@ -48,7 +51,7 @@
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/system/setup"
     timeout: "{{ timeout }}"
-    validate_certs: "{{ validate_certs }}"
+    validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: setupchk
@@ -62,40 +65,33 @@
   include_tasks: "check-bigip-in-same-cluster.yaml"
   when: not standalone
 
-- name: Confirm proceed if RMA device is standalone
+- name: Confirm Proceed
   pause:
-    prompt: "\n- Confirm the RMA device {{ current_as3_target }} has been replaced and UCS backup restored.
+    prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and fully functioning.\n
+             \nSteps executed by the role:
+             \n1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
+             \n2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+             \n3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
+             \n4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
+             \n5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)\n
+             \nNote: All app services custom roles will be removed in BIG-IQ and you will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
-  register: confirm_standalone
-  when: 
-    - standalone
+  register: confirm_proceed
 
 - fail:
-    msg: "Please, replace & restore RMA device before using this role."
-  when: 
-    - standalone
-    - not confirm_standalone.user_input | bool
+    msg: "Please, Replace & Restore RMA device {{ current_as3_target }} before using this role."
+  when:  not confirm_proceed.user_input | bool
 
-- name: Backup device's AS3 declarations
+
+#1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
+- name: Step 1 - Backup device's AS3 declarations
   include_tasks: "backup-as3.yaml"
 
 - name: Get app services details to cleanup
   include_tasks: "cleanup-get-apps-details.yaml"
 
-- name: Step 1 - Confirm Apps deletion from current_as3_target
-  pause:
-    prompt: "\n- Confirm the RMA device is {{ current_as3_target }} and {{ new_as3_target }} device ready to be used.
-             \n- All AS3 application services using {{ current_as3_target }} from BIG-IQ dashboard will be deleted.
-             \n (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-             \n- All app services custom roles will be removed in BIG-IQ and you will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
-             \n\nDo you want to proceed? (yes/no)"
-  register: confirm_proceed
-
-- fail:
-    msg: "Please, delete first the Apps on BIG-IQ dashboard."
-  when:  not confirm_proceed.user_input | bool
-
-- name: Handle errors with pin objects
+#2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+- name: Step 2 - Handle errors with pin objects
   block:
   - name: Force-Delete Application Services in {{ current_as3_target }}
     include_tasks: "cleanup-apps-RMA-device.yaml"
@@ -112,32 +108,46 @@
     with_items: "{{ configSets }}"
     loop_control:
       loop_var: item1
-  - name: set variable to use to display additional warning at the end about the need of re-discover & re-import the devices after
-    set_fact:
-      warning: true
   when: confirm_proceed.user_input | bool
 
-- name: Make a backup file of {{ dir_as3 }}/{{ new_as3_target }}
-  copy:
-    src: "{{ dir_as3 }}/{{ new_as3_target }}.json"
-    dest: "{{ dir_as3 }}/{{ new_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}"
-  when: 
-    - standalone
-    - confirm_proceed.user_input | bool
+# 3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
 
-- name: Confirm proceed if RMA device is standalone
+#- name: Collect module imported on this device before removal
+# GET /mgmt/cm/system/machineid-resolver
+
+- name: Remove discovered device {{ current_as3_target }} and its config
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    state: absent
+    provider:
+      user: "{{ provider.user }}"
+      password: "{{ provider.password }}"
+      auth_provider: "{{ provider.auth_provider }}"
+      server: "{{ provider.server }}"
+      validate_certs: "{{ provider.validate_certs }}"
+  delegate_to: localhost
+
+# 4. Add back the RMA device {{ current_as3_target }} in BIG-IQ 
+#- name: Add back the device {{ current_as3_target }} and its config
+#  f5networks.f5_modules.bigiq_device_discovery:
+#
+# when: standalone or not standalone? => {{ clusterName_device1 }}
+# stats enabled or not?
+
+######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
+- name: Step 4 - Add back the device {{ current_as3_target }} and its config
   pause:
-    prompt: "\n- Now, remove {{ current_as3_target }} from BIG-IQ and add it back (discover & import {{ new_as3_target }}).
-             \n (a backup of the original AS3 declaration from RMA device has been saved in 
-             \n{{ dir_as3 }}/{{ new_as3_target }}.json.bkp.{{ ansible_date_time.iso8601 }}).
+    prompt: "\n- Login to BIG-IQ UI https://{{ provider.server }} and add {{ current_as3_target }} back in BIG-IQ.\n
+             \n- Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair.
+             \n- Make sure sure you Re-Discover & Re-import ALL the modules (Conflict Resolution Policy: Use BIG-IP for Device Object Conflict)
              \n\nHit any key to continue"
-  when: 
-    - standalone
-    - confirm_proceed.user_input | bool
+  register: ignore_confirm
+######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
 
-- name: Step 2 - Confirm Apps deployment to the new_as3_target - Standalone
+# 5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)
+- name: Step 5 - Confirm Apps deployment to the new_as3_target
   pause:
-    prompt: "\n- Confirm the device {{ new_as3_target }} is the correct new target device.
+    prompt: "\n- Confirm the RMA device {{ current_as3_target }} has been added back to BIG-IQ.
              \n- This step will redeploy the AS3 application services to the new target {{ new_as3_target }} (no service impact).
              \n\nHit any key to continue"
   register: ignore_confirm
@@ -161,22 +171,3 @@
   loop_control:
     loop_var: item2
   when: confirm_proceed.user_input | bool
-
-- name: Next steps...
-  debug:
-    msg: 
-      - "Actions to perform after the role is used:"
-      - "- Once the AS3 application services have been re-deployed to the {{ new_as3_target }}, you can now remove the RMA device {{ current_as3_target }} from BIG-IQ (remove all services first)."
-      - "- Once {{ current_as3_target }} is removed from BIG-IQ, you can add it back after the device has been replaced and UCS backup restored."
-      - "- Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair."    
-      - "- Make sure sure you Re-Discover & Re-import ALL the modules for {{ current_as3_target }} and {{ new_as3_target }} once RMA device replaced."
-      - "(Conflict Resolution Policy: Use BIG-IP for Device Object Conflict)"
-      - "- If you had users assigned to the AS3 application services in {{ current_as3_target }}, you will need to re-assign the application services roles to those users."
-  when: confirm_proceed.user_input | bool
-
-- name: Additional warning...
-  debug:
-    msg: 
-      - "WARNING: The SSL certs and keys have been unpinned from the devices {{ current_as3_target }} and {{ new_as3_target }} in BIG-IQ."
-      - "Make sure sure you Re-Discover & Re-import ALL the modules for {{ current_as3_target }} and {{ new_as3_target }} once RMA device replaced."
-  when: warning is defined
