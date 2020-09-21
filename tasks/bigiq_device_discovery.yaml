@@ -1,0 +1,195 @@
+---
+# Pre-step
+- name: Pre-Step 3 - Collect device info {{ current_as3_target }}
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/machineid-resolver?$filter=address%20eq%20'{{ current_as3_target }}'
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response
+
+- name: Pre-Step 3 - Collect module imported on {{ current_as3_target }} before removal
+  set_fact:
+    modules: "{{ json_response | json_query(query) 
+                | reject('search','BigIPDevice') | list
+                | reject('search','fpsfraudprotectionsecurity') | list
+                | regex_replace('adc', 'ltm')
+                | regex_replace('asmsecurity', 'asm')
+                | regex_replace('sharedsecurity', 'security_shared') 
+                | regex_replace('networksecurity', 'afm')
+                | regex_replace('Access', 'apm')
+                | regex_replace('websafesecurity', 'websafe') }}"
+  vars: 
+    query: 'json.items[0].properties."cm:gui:module"'
+    BigIPDevice: '"BigIPDevice",'
+
+- debug:
+    var: modules
+
+# Ansible naming => BIG-IQ naming:
+# ltm => adc
+# asm => asmsecurity
+# apm => Access
+# afm => networksecurity
+# dns => dns
+# websafe => websafesecurity
+# security_shared => sharedsecurity
+
+- name: Check if apm module provisionned
+  set_fact:
+    apm: true
+  when: "'apm' in {{ modules }}"
+
+- name: Pre-Step 3 - Collect Access Group name on {{ current_as3_target }} before removal
+  set_fact:
+    access_group_name: "{{ json_response | json_query(query) }}"
+  vars: 
+    query: 'json.items[0].properties."cm-access-allBigIpDevices"."cm:access:access-group-name"'
+  when: apm is defined
+
+- debug:
+    var: access_group_name
+  when: apm is defined
+
+# 3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
+- name: Step 3 - Remove discovered device {{ current_as3_target }} and its config
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    state: absent
+    provider: "{{ provider }}"
+
+# 4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
+- name: Step 4 - Add back the device {{ current_as3_target }} and its config - HA cluster
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    ha_name: "{{ clusterName_device1 }}"
+    use_bigiq_sync: "{{ use_bigiq_sync }}"
+    provider: "{{ provider }}"
+  when: 
+    - not standalone | bool
+    - apm is not defined
+
+- name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ new_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    ha_name: "{{ clusterName_device1 }}"
+    use_bigiq_sync: "{{ use_bigiq_sync }}"
+    provider: "{{ provider }}"
+  when:
+    - not standalone | bool
+    - apm is not defined
+
+- name: Step 4 - Add back the device {{ current_as3_target }} and its config - Standalone
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    provider: "{{ provider }}"
+  when: 
+    - standalone | bool
+    - apm is not defined
+
+# If BIG-IP has access module provisionned
+- name: Step 4 - Add back the device {{ current_as3_target }} and its config - HA cluster with APM
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    access_group_name: "{{ access_group_name }}"
+    access_group_first_device: "{{ access_group_first_device }}"
+    access_conflict_policy: "{{ access_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    ha_name: "{{ clusterName_device1 }}"
+    use_bigiq_sync: "{{ use_bigiq_sync }}"
+    provider: "{{ provider }}"
+  when: 
+    - not standalone | bool
+    - apm is defined
+
+- name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster with APM
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ new_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    access_group_name: "{{ access_group_name }}"
+    access_group_first_device: "{{ access_group_first_device }}"
+    access_conflict_policy: "{{ access_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    ha_name: "{{ clusterName_device1 }}"
+    use_bigiq_sync: "{{ use_bigiq_sync }}"
+    provider: "{{ provider }}"
+  when:
+    - not standalone | bool
+    - apm is defined
+
+- name: Step 4 - Add back the device {{ current_as3_target }} and its config - Standalone with APM
+  f5networks.f5_modules.bigiq_device_discovery:
+    device_address: "{{ current_as3_target }}"
+    device_username: "{{ device_username }}"
+    device_password: "{{ device_password }}"
+    modules: "{{ modules | list }}"
+    conflict_policy: "{{ conflict_policy }}"
+    device_conflict_policy: "{{ device_conflict_policy }}"
+    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+    access_group_name: "{{ access_group_name }}"
+    access_group_first_device: "{{ access_group_first_device }}"
+    access_conflict_policy: "{{ access_conflict_policy }}"
+    statistics:
+      enable: "{{ enable }}"
+      stat_modules: "{{ stat_modules | list }}"
+      interval: "{{ interval }}"
+      zone: "{{ zone }}"
+    provider: "{{ provider }}"
+  when: 
+    - standalone | bool
+    - apm is defined

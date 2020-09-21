@@ -1,26 +1,5 @@
 ---
 # Find out Global App name
-
-######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
-- name: Get authentication token
-  uri:
-    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/authn/login"
-    method: POST
-    timeout: "{{ timeout }}"
-    validate_certs: "{{ provider.validate_certs }}"
-    body:
-      username: "{{ provider.user }}"
-      password: "{{ provider.password }}"
-      loginProviderName: "{{ provider.auth_provider }}"
-    body_format: json
-  register: authtoken
-
-- name: Set the token fact if authentication succeeded
-  set_fact:
-    f5_auth_token: "{{ authtoken.json.token.token }}"
-  when: authtoken is success
-######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
-
 - name: Get global App name from applicationReference
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item2.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
@@ -32,9 +11,14 @@
     status_code: 200, 202
   register: json_response
 
+- name: Save Apps Services to be moved
+  set_fact:
+    app_service_name: "{{ item2.configSetName }}"
+    bigiq_global_app: "{{ json_response.json.name }}"
+
 - name: Show Apps Services to be moved
   debug:
-    msg: "{{ item2.configSetName }} moved to {{ json_response.json.name }} "
+    msg: "{{ app_service_name }} moved to {{ bigiq_global_app }} " 
 
 # Move item in Global App name
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
@@ -42,7 +26,49 @@
     name: f5devcentral.bigiq_move_app_dashboard
   vars:
       apps: 
-      - name: "{{ json_response.json.name }}"
+      - name: "{{ bigiq_global_app }}"
         pins: 
-          - name: "{{ item2.configSetName }}"
+          - name: "{{ app_service_name }}"
   register: status
+
+# Backup Global Apps
+- name: Load bigiq_apps_mapping file if it exists already 
+  set_fact:
+    apps_current_item: '[{"name":"{{ bigiq_global_app }}","pins":[{"name":"{{ app_service_name }}"}]}]'
+
+- debug:
+    var: apps_current_item
+
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  register: file_exist_apps
+
+- name: Load bigiq_apps_mapping file if it exists already 
+  set_fact:
+    apps_restore: "{{ lookup('file', path_mapping_file) }}"
+  vars:
+    path_mapping_file: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  when: file_exist_apps.stat.exists
+
+- name: apps_current_item + apps_restore
+  set_fact:
+    apps_all: "{{ apps_current_item + apps_restore }}"
+  when: file_exist_apps.stat.exists
+
+- debug:
+    var: apps_restore
+
+- debug:
+    var: apps_all
+
+- name: Save output in a file ALL declarations stored on BIG-IQ
+  lineinfile:
+    create: yes
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+    line: "{{ apps_current_item | to_nice_json }}"
+  when: not file_exist_apps.stat.exists
+
+- name: Save output in a file ALL declarations stored on BIG-IQ
+  local_action: copy content={{ apps_all | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  when: file_exist_apps.stat.exists

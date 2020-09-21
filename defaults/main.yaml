@@ -4,3 +4,25 @@ timeout: 120
 dir_as3: ~/tmp # Working directory to store migration files on your local machine
 
 standalone: false # Set to true if RMA device is a standalone device
+
+device_username: admin # current_as3_target username
+
+# Conflict resolution options
+conflict_policy: use_bigip
+device_conflict_policy: use_bigip
+versioned_conflict_policy: keep_version
+access_conflict_policy: use_bigip
+access_group_first_device: yes
+
+# CLuster Sync
+use_bigiq_sync: yes
+
+# Stats options
+enable: yes
+stat_modules: 
+  - device
+  - ltm
+  - dns
+  #- afm NOT supported by bigiq_device_discovery ansible module
+interval: 60
+zone: default

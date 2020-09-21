@@ -74,7 +74,8 @@
              \n3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
              \n4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
              \n5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)\n
-             \nNote: All app services custom roles will be removed in BIG-IQ and you will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
+             \nNote: All app services custom roles will be removed in BIG-IQ.
+             \nYou will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
   register: confirm_proceed
 
@@ -82,75 +83,38 @@
     msg: "Please, Replace & Restore RMA device {{ current_as3_target }} before using this role."
   when:  not confirm_proceed.user_input | bool
 
-
 #1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
 - name: Step 1 - Backup device's AS3 declarations
-  include_tasks: "backup-as3.yaml"
+  include_tasks: "backup-as3-apps.yaml"
 
 - name: Get app services details to cleanup
-  include_tasks: "cleanup-get-apps-details.yaml"
+  include_tasks: "get-apps-details.yaml"
 
 #2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-- name: Step 2 - Handle errors with pin objects
+- name: Step 2 - Force-Delete Application Services
   block:
   - name: Force-Delete Application Services in {{ current_as3_target }}
-    include_tasks: "cleanup-apps-RMA-device.yaml"
+    include_tasks: "force-delete-apps-RMA-device.yaml"
     with_items: "{{ configSets }}"
     loop_control:
       loop_var: item1
   rescue:
   # BIQPROJ-26703
   - name: Unpin slCertReferences and sslKeyReferences LTM objects from {{ current_as3_target }} and {{ new_as3_target }} 
-    include_tasks: "cleanup-bigiq-pinned-objects-RMA-device.yaml"
+    include_tasks: "delete-bigiq-pinned-objects-RMA-device.yaml"
     # After un-pin those objects, force-delete should work on remaining AS3 app
   - name: Force-Delete Application Services in {{ current_as3_target }}
-    include_tasks: "cleanup-apps-RMA-device.yaml"
+    include_tasks: "force-delete-apps-RMA-device.yaml"
     with_items: "{{ configSets }}"
     loop_control:
       loop_var: item1
   when: confirm_proceed.user_input | bool
 
-# 3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
-
-#- name: Collect module imported on this device before removal
-# GET /mgmt/cm/system/machineid-resolver
-
-- name: Remove discovered device {{ current_as3_target }} and its config
-  f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
-    state: absent
-    provider:
-      user: "{{ provider.user }}"
-      password: "{{ provider.password }}"
-      auth_provider: "{{ provider.auth_provider }}"
-      server: "{{ provider.server }}"
-      validate_certs: "{{ provider.validate_certs }}"
-  delegate_to: localhost
-
-# 4. Add back the RMA device {{ current_as3_target }} in BIG-IQ 
-#- name: Add back the device {{ current_as3_target }} and its config
-#  f5networks.f5_modules.bigiq_device_discovery:
-#
-# when: standalone or not standalone? => {{ clusterName_device1 }}
-# stats enabled or not?
-
-######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
-- name: Step 4 - Add back the device {{ current_as3_target }} and its config
-  pause:
-    prompt: "\n- Login to BIG-IQ UI https://{{ provider.server }} and add {{ current_as3_target }} back in BIG-IQ.\n
-             \n- Make sure you add it to the existing BIG-IP cluster in BIG-IQ if this device was part of a Active-Standby HA pair.
-             \n- Make sure sure you Re-Discover & Re-import ALL the modules (Conflict Resolution Policy: Use BIG-IP for Device Object Conflict)
-             \n\nHit any key to continue"
-  register: ignore_confirm
-######### TO REMOVE ONCE STEP 4 WILL BE AUTOMATED
+# 3. and 4. Remove and Add the RMA device {{ current_as3_target }} from BIG-IQ
+- name: Step 3 and 4 Remove and Add the RMA device {{ current_as3_target }} from BIG-IQ
+  include_tasks: "bigiq_device_discovery.yaml"
 
 # 5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)
-- name: Step 5 - Confirm Apps deployment to the new_as3_target
-  pause:
-    prompt: "\n- Confirm the RMA device {{ current_as3_target }} has been added back to BIG-IQ.
-             \n- This step will redeploy the AS3 application services to the new target {{ new_as3_target }} (no service impact).
-             \n\nHit any key to continue"
-  register: ignore_confirm
 
 # Post AS3 declaration to new device using atc_deploy
 - name: ATC POST - create new {{ new_as3_target }}
@@ -159,15 +123,31 @@
   vars:
     atc_service: AS3
     atc_method: POST
-    atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}.json"
+    atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}_bigip.json"
     atc_delay: 15
     atc_retries: 30
   register: atc_AS3_status
-  when: confirm_proceed.user_input | bool
+
+# Backup mapping app services location in BIG-IQ App dashboard
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  register: file_exist_apps
+
+- name: Backup the bigiq_apps_mapping file is it exist already 
+  copy:
+    src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_apps.stat.exists
+
+- name: Delete File {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json if it exists
+  file:
+    state: absent
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  when: file_exist_apps.stat.exists
 
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
   include_tasks: "move-app-services.yaml"
   with_items: "{{ configSets }}"
   loop_control:
     loop_var: item2
-  when: confirm_proceed.user_input | bool
