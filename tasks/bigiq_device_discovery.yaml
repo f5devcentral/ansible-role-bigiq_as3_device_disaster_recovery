@@ -41,7 +41,7 @@
 - name: Check if apm module provisionned
   set_fact:
     apm: true
-  when: "'apm' in {{ modules }}"
+  when: '"apm" in modules'
 
 - name: Pre-Step 3 - Collect Access Group name on {{ current_as3_target }} before removal
   set_fact:
@@ -99,6 +99,7 @@
       zone: "{{ zone }}"
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
+    force: yes # Force Re-discovery and Import on the new_as3_target
     provider: "{{ provider }}"
   when:
     - not standalone | bool
@@ -167,6 +168,7 @@
       zone: "{{ zone }}"
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
+    force: yes # Force Re-discovery and Import on the new_as3_target
     provider: "{{ provider }}"
   when:
     - not standalone | bool

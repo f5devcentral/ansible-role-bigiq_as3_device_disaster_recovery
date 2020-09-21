@@ -137,7 +137,7 @@ Please, make sure you verify the content of the json files before restoring any 
           validate_certs: false
 
       tasks:
-          - name: ATC POST
+          - name: Restore AS3 declaration backup from 10.1.1.7
             include_role:
               name: f5devcentral.atc_deploy
             vars:
@@ -148,7 +148,7 @@ Please, make sure you verify the content of the json files before restoring any 
               atc_retries: 30
             register: atc_AS3_status
 
-          - name: Move AS3 application service(s) in BIG-IQ application dashboard.
+          - name: Move Restored AS3 application service(s) in original BIG-IQ application dashboard.
             include_role:
               name: f5devcentral.bigiq_move_app_dashboard
             vars:

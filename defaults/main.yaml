@@ -12,7 +12,7 @@ conflict_policy: use_bigip
 device_conflict_policy: use_bigip
 versioned_conflict_policy: keep_version
 access_conflict_policy: use_bigip
-access_group_first_device: yes
+access_group_first_device: no
 
 # CLuster Sync
 use_bigiq_sync: yes

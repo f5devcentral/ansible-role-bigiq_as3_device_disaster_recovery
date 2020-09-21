@@ -61,10 +61,6 @@
     msg: "The CM device has not been setup. Please onboard the DCD device first."
   when: setupchk.json.isSystemSetup is not defined or not setupchk.json.isSystemSetup|bool
 
-- name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
-  include_tasks: "check-bigip-in-same-cluster.yaml"
-  when: not standalone
-
 - name: Confirm Proceed
   pause:
     prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and fully functioning.\n
@@ -83,6 +79,10 @@
     msg: "Please, Replace & Restore RMA device {{ current_as3_target }} before using this role."
   when:  not confirm_proceed.user_input | bool
 
+- name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
+  include_tasks: "check-bigip-in-same-cluster.yaml"
+  when: not standalone
+  
 #1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
 - name: Step 1 - Backup device's AS3 declarations
   include_tasks: "backup-as3-apps.yaml"
