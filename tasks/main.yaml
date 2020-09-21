@@ -73,7 +73,7 @@
              \n2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
              \n3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
              \n4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
-             \n5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)\n
+             \n5. Re-deploy the AS3 application services on the new target device {{ new_as3_target }} (no service impact)\n
              \nNote: All app services custom roles will be removed in BIG-IQ.
              \nYou will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
