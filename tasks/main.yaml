@@ -15,7 +15,7 @@
     body:
       username: "{{ provider.user }}"
       password: "{{ provider.password }}"
-      loginProviderName: "{{ provider.auth_provider }}"
+      loginProviderName: "{{ provider.auth_provider | default('tmos') }}"
     body_format: json
   register: authtoken
 
@@ -145,6 +145,9 @@
     state: absent
     path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
   when: file_exist_apps.stat.exists
+
+# If Legacy App or Service Catalog App were deleted
+# Re-build them using {{ configSets }}
 
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
   include_tasks: "move-app-services.yaml"

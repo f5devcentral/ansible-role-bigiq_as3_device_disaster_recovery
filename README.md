@@ -23,13 +23,15 @@ Steps executed by the role automatically:
 
 # Limitations
 
-- RMA device IP address must be the same after the device has been replaced & restore
+- The RMA device must have **ONLY AS3 application services** (no Service Catalog or Legacy services).
+If you are interested to support those types of app services [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
+- RMA device IP address must be the same after the device has been replaced & restore.
 - This role does NOT save the Application Services **Custom Application Roles** assigned to a user or groups of users for the applications hosted on the RMA device. 
 You may not use this role if you are in this case. If you are interested to support the user/application roles relation [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
 
 # Notes
 
-- The Analytics history on BIG-IQ for this device won't be lost.
+- The Analytics history on BIG-IQ for this device won't be lost but BIG-IQ won't collect analytics when the RMA device is removed then re-added to the BIG-IQ.
 - The re-discover & re-import of the RMA device repaired will use the following conflict resolution policy **Use BIG-IP** by default.
 - If you had users assigned to the AS3 application services in RMA device, you will need to re-assign the application services roles to those users after the role is executed
 

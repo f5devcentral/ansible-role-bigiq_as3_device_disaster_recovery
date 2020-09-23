@@ -1,5 +1,4 @@
 ---
-# Find out Global App name
 - name: Get global App name from applicationReference
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item2.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
