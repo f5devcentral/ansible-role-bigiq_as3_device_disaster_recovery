@@ -5,8 +5,6 @@ dir_as3: ~/tmp # Working directory to store migration files on your local machin
 
 standalone: false # Set to true if RMA device is a standalone device
 
-device_username: admin # current_as3_target username
-
 # Conflict resolution options
 conflict_policy: use_bigip
 device_conflict_policy: use_bigip

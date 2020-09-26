@@ -4,7 +4,7 @@ dependencies: []
 galaxy_info:
   role_name: bigiq_as3_device_disaster_recovery
   author: rjouhann
-  description: Move all AS3 application services on BIG-IQ from BIG-IP device which needed a RMA.
+  description: Replace a RMA (Return Merchandise Authorization) device on BIG-IQ with AS3 application services deployed on it.
   company: F5 Networks
   license: Apache
   min_ansible_version: 2.7

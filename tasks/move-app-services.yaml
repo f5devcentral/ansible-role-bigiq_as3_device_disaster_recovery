@@ -1,7 +1,7 @@
 ---
 - name: Get global App name from applicationReference
   uri:
-    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item2.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item3.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"
@@ -12,12 +12,22 @@
 
 - name: Save Apps Services to be moved
   set_fact:
-    app_service_name: "{{ item2.configSetName }}"
+    app_service_name: "{{ item3.configSetName }}"
     bigiq_global_app: "{{ json_response.json.name }}"
 
 - name: Show Apps Services to be moved
   debug:
-    msg: "{{ app_service_name }} moved to {{ bigiq_global_app }} " 
+    msg: "{{ app_service_name }} moved to {{ bigiq_global_app }}"
+    
+- name: Is Service Catalog App?
+  debug:
+    msg: "yes"
+  when: item3.templateReference is defined
+  
+- name: Is Legacy App?
+  debug:
+    msg: "yes"
+  when: item3.classicConfigReference is defined
 
 # Move item in Global App name
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
@@ -29,6 +39,31 @@
         pins: 
           - name: "{{ app_service_name }}"
   register: status
+  when: # for now, just ignore service catalog or legacy apps
+    - item3.templateReference is not defined
+    - item3.classicConfigReference is not defined
+
+### START -- This part is just to record all the Service Catalog apps and Legacy Apps
+- name: Record service catalog app details
+  set_fact:
+    tmp1: '{{ bigiq_global_app }}->{{ app_service_name }} (service catalog)'
+  when: item3.templateReference is defined # if Service Catalog
+
+- name: Record legacy app details
+  set_fact:
+    tmp2: '{{ bigiq_global_app }}->{{ app_service_name }} (legacy)'
+  when: item3.classicConfigReference is defined # if Legacy App
+
+- name: sc_legacy_apps + tmp1
+  set_fact:
+    sc_legacy_apps: "{{ sc_legacy_apps|default([]) + [ tmp1 ] }}"
+  when: item3.templateReference is defined
+
+- name: sc_legacy_apps + tmp1
+  set_fact:
+    sc_legacy_apps: "{{ sc_legacy_apps|default([]) + [ tmp2 ] }}"
+  when: item3.classicConfigReference is defined
+### END
 
 # Backup Global Apps
 - name: Load bigiq_apps_mapping file if it exists already 

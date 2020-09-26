@@ -1,0 +1,20 @@
+---
+
+- name: App Service Name
+  set_fact:
+    app_service_name: "{{ item2.configSetName }}"
+
+#### If Service Castalog => Convert to Legacy
+# resources."ltm:virtual::b487671f29ba".[parameters.destinationAddress]
+
+# - name: Action if Service Catalog
+#   ...
+#   when: item2.templateReference is defined
+
+#### If Legacy => Re-create Legacy App
+# details in here {{ classicConfigs }} can filter on the name = item2
+
+# - name: Action if Legacy App
+#   ...
+#   when: item2.classicConfigReference is defined
+

@@ -3,6 +3,21 @@
   set_fact:
     provider: "{{ provider }}"
 
+- fail: msg="The variable 'device_username' is not defined"
+  when: device_username is undefined
+
+- fail: msg="The variable 'device_password' is not defined"
+  when: device_password is undefined
+
+- fail: msg="The variable 'dir_as3' is not defined"
+  when: dir_as3 is undefined
+
+- fail: msg="The variable 'current_as3_target' is not defined"
+  when: current_as3_target is undefined
+
+- fail: msg="The variable 'new_as3_target' is not defined"
+  when: new_as3_target is undefined
+
 - name: Install Galaxy roles and conditions
   include_tasks: install-galaxy-roles-collections.yml
 
@@ -82,7 +97,7 @@
 - name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
   include_tasks: "check-bigip-in-same-cluster.yaml"
   when: not standalone
-  
+
 #1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
 - name: Step 1 - Backup device's AS3 declarations
   include_tasks: "backup-as3-apps.yaml"
@@ -124,9 +139,10 @@
     atc_service: AS3
     atc_method: POST
     atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}_bigip.json"
-    atc_delay: 15
+    atc_delay: 30
     atc_retries: 30
   register: atc_AS3_status
+  ignore_errors: yes
 
 # Backup mapping app services location in BIG-IQ App dashboard
 - name: Check that the {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json exists
@@ -146,11 +162,20 @@
     path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
   when: file_exist_apps.stat.exists
 
-# If Legacy App or Service Catalog App were deleted
-# Re-build them using {{ configSets }}
+# - name: Service Catalog and Legacy App service use cases
+#   include_tasks: "service-catalog-and-legacy-apps.yaml"
+#   with_items: "{{ configSets }}"
+#   loop_control:
+#     loop_var: item2
 
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
   include_tasks: "move-app-services.yaml"
   with_items: "{{ configSets }}"
   loop_control:
-    loop_var: item2
+    loop_var: item3
+
+## SHOW any service catalog template or legacy apps removed which needs to be re-created manually
+- name: Service Catalog or Legacy App Services removed which needs to be re-created manually on the BIG-IQ.
+  debug:
+    msg:
+      - "{{ sc_legacy_apps }}"
