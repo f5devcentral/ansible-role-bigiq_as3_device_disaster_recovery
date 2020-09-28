@@ -3,6 +3,10 @@ timeout: 120
 
 dir_as3: ~/tmp # Working directory to store migration files on your local machine
 
+device_port: 443
+
+skip_add_remove_rma_device: false
+
 standalone: false # Set to true if RMA device is a standalone device
 
 # Conflict resolution options

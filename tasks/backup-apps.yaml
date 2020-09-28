@@ -1,0 +1,186 @@
+---
+# Backup current_as3_target AS3 declarations
+- name: Check that the {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  register: file_exist
+
+- name: Backup the file is it exist already (in case of launching the module multiple times with failure)
+  copy:
+    src: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist.stat.exists
+
+# Backup Mapping files if it exists
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+  register: file_exist_apps
+
+- name: Backup the bigiq_apps_mapping file is it exist already 
+  copy:
+    src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_apps.stat.exists
+
+- name: Create a directory if it does not exist where we will store the AS3 declaration
+  file:
+    path: "{{ dir_as3 }}"
+    state: directory
+    mode: '0755'
+
+# Retrieve All AS3 declarations
+- name: Get All AS3 declaration from BIG-IQ
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/appsvcs/declare
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response1
+
+##### Backup ALL AS3 declarations
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
+  register: file_exist_all
+
+- name: Backup the file is it exist already 
+  copy:
+    src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_all.stat.exists
+
+- name: Save output in a file ALL declarations stored on BIG-IQ
+  local_action: copy content={{ json_response1.json | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
+  when: not file_exist_all.stat.exists
+
+# Backup declaration from device if BIG-IQ has more than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - More than 1 device
+  local_action: copy content={{ json_response1 | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  vars:
+    query: "json[?target.address=='{{ current_as3_target }}']"
+  when: json_response1.json.class is not defined
+
+# Backup declaration from device if BIG-IQ only 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - 1 device
+  local_action: copy content={{ json_response1.json | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  when: json_response1.json.class is defined
+
+##### Create new_as3_target AS3 declarations
+- name: Make a copy of previous file to {{ dir_as3 }}/{{ current_as3_target }} if already exist
+  copy:
+    src: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+
+- name: Remove BIG-IQ id
+  lineinfile: 
+    dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+    state: absent 
+    regexp: '^    "id":'
+
+- name: Replace target BIG-IP with new target {{ new_as3_target }}
+  lineinfile:
+    path: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+    regexp: '^        "address":'
+    line: '        "address": "{{ new_as3_target }}"'
+
+### Config Set
+- name: Get machineId of the device
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ current_as3_target }}...{{ current_as3_target }}'"
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: json_response2
+
+- name: Get the machineId of the specified BIG-IP
+  set_fact:
+    machine_id: "{{ json_response2 | json_query(query) | join(' ') }}"
+  vars: 
+    query: "json.items[?address=='{{ current_as3_target }}'].machineId"
+
+- name: Get ALL app services name (configSetName) in the device specified {{ current_as3_target }}
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/config-sets?$filter=deviceReference.link%20eq%20'https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machine_id }}'
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response3
+
+- name: Get ALL config-sets for {{ current_as3_target }}
+  set_fact:
+    configSets: "{{ json_response3 | json_query(query) }}"
+  vars: 
+    query: "json.items[*]"
+
+- name: Get configSetName and applicationReference in config-sets
+  debug:
+    msg: "{{ item4.configSetName }} located in {{ item4.applicationReference }} (Global app reference)"
+  with_items: "{{ configSets }}"
+  loop_control:
+    loop_var: item4
+
+##### Backup configSets
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
+  register: file_exist_all_configSets
+
+- name: Backup the file is it exist already 
+  copy:
+    src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_all_configSets.stat.exists
+
+- name: Save output in a file of all configSets for the device current_as3_target
+  local_action: copy content={{ configSets | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
+  when: not file_exist_all_configSets.stat.exists
+
+### Backup Legacy App details (if any)
+- name: Get ALL legacy app services name (configSetName) in the device specified {{ current_as3_target }}
+  uri:
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/classic-configs?$filter=machineId%20eq%20'{{ machine_id }}'
+    method: GET
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    status_code: 200, 202
+  register: json_response4
+
+- name: Get ALL classic-configs for {{ current_as3_target }}
+  set_fact:
+    classicConfigs: "{{ json_response4 | json_query(query) }}"
+  vars: 
+    query: "json.items[*]"
+
+# - name: Get classicConfigs and applicationReference in config-sets
+#   debug:
+#     msg: "{{ item5.name }} located in {{ item5.currentConfigVirtualServerReferences }} (VIP reference)"
+#   with_items: "{{ classicConfigs }}"
+#   loop_control:
+#     loop_var: item5
+
+##### Backup classicConfigs
+- name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists
+  stat:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+  register: file_exist_all_classicConfigs
+
+- name: Backup the file is it exist already 
+  copy:
+    src: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+  when: file_exist_all_classicConfigs.stat.exists
+
+- name: Save output in a file of all classicConfigs for the device current_as3_target
+  local_action: copy content={{ classicConfigs | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+  when: not file_exist_all_classicConfigs.stat.exists

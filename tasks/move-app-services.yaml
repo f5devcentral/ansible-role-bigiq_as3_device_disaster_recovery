@@ -39,30 +39,18 @@
         pins: 
           - name: "{{ app_service_name }}"
   register: status
-  when: # for now, just ignore service catalog or legacy apps
-    - item3.templateReference is not defined
-    - item3.classicConfigReference is not defined
+  when: item3.templateReference is not defined # for now, just ignore service catalog
 
-### START -- This part is just to record all the Service Catalog apps and Legacy Apps
+### START -- This part is just to record all the Service Catalog apps
 - name: Record service catalog app details
   set_fact:
     tmp1: '{{ bigiq_global_app }}->{{ app_service_name }} (service catalog)'
   when: item3.templateReference is defined # if Service Catalog
 
-- name: Record legacy app details
+- name: sc_apps + tmp
   set_fact:
-    tmp2: '{{ bigiq_global_app }}->{{ app_service_name }} (legacy)'
-  when: item3.classicConfigReference is defined # if Legacy App
-
-- name: sc_legacy_apps + tmp1
-  set_fact:
-    sc_legacy_apps: "{{ sc_legacy_apps|default([]) + [ tmp1 ] }}"
+    sc_apps: "{{ sc_apps|default([]) + [ tmp ] }}"
   when: item3.templateReference is defined
-
-- name: sc_legacy_apps + tmp1
-  set_fact:
-    sc_legacy_apps: "{{ sc_legacy_apps|default([]) + [ tmp2 ] }}"
-  when: item3.classicConfigReference is defined
 ### END
 
 # Backup Global Apps

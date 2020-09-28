@@ -76,15 +76,32 @@
     msg: "The CM device has not been setup. Please onboard the DCD device first."
   when: setupchk.json.isSystemSetup is not defined or not setupchk.json.isSystemSetup|bool
 
+- name: Get authentication token for RMA BIG-IP current_as3_target
+  uri:
+    url: "https://{{ current_as3_target }}:{{ device_port }}/mgmt/shared/authn/login"
+    method: POST
+    validate_certs: no
+    body:
+      username: "{{ device_username }}"
+      password: "{{ device_password }}"
+      loginProviderName: tmos
+    body_format: json
+  register: authtoken2
+
+- name: Fail if Authentication to the RMA device fails
+  fail:
+    msg: "Cannot authenticate to RMA BIG-IP {{ current_as3_target }}:{{ target_port }}, please verify the BIG-IP has been restored and accessible."
+  when: authtoken2 is not success
+
 - name: Confirm Proceed
   pause:
     prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and fully functioning.\n
              \nSteps executed by the role:
-             \n1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
-             \n2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+             \n1. Backup AS3 declarations and Legacy App Services from RMA device {{ current_as3_target }} 
+             \n2. Delete the Application Services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
              \n3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
              \n4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
-             \n5. Re-deploy the AS3 application services on the new target device {{ new_as3_target }} (no service impact)\n
+             \n5. Re-deploy the AS3 and Legacy Application Services on the new target device {{ new_as3_target }} (no service impact)\n
              \nNote: All app services custom roles will be removed in BIG-IQ.
              \nYou will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
@@ -99,11 +116,8 @@
   when: not standalone
 
 #1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
-- name: Step 1 - Backup device's AS3 declarations
-  include_tasks: "backup-as3-apps.yaml"
-
-- name: Get app services details to cleanup
-  include_tasks: "get-apps-details.yaml"
+- name: Step 1 - Backup device's AS3 declarations and existing previous 
+  include_tasks: "backup-apps.yaml"
 
 #2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
 - name: Step 2 - Force-Delete Application Services
@@ -128,45 +142,25 @@
 # 3. and 4. Remove and Add the RMA device {{ current_as3_target }} from BIG-IQ
 - name: Step 3 and 4 Remove and Add the RMA device {{ current_as3_target }} from BIG-IQ
   include_tasks: "bigiq_device_discovery.yaml"
+  when: not skip_add_remove_rma_device
 
 # 5. Re-deploy the AS3 application services on the new target device {{ current_as3_target }} (no service impact)
-
-# Post AS3 declaration to new device using atc_deploy
-- name: ATC POST - create new {{ new_as3_target }}
+- name: ATC POST - create new {{ new_as3_target }} # Post AS3 declaration to new device using atc_deploy
   include_role:
     name: f5devcentral.atc_deploy
   vars:
     atc_service: AS3
     atc_method: POST
-    atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}_bigip.json"
+    atc_declaration_file: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
     atc_delay: 30
     atc_retries: 30
   register: atc_AS3_status
-  ignore_errors: yes
 
-# Backup mapping app services location in BIG-IQ App dashboard
-- name: Check that the {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json exists
-  stat:
-    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
-  register: file_exist_apps
-
-- name: Backup the bigiq_apps_mapping file is it exist already 
-  copy:
-    src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
-    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json.bkp.{{ ansible_date_time.iso8601 }}"
-  when: file_exist_apps.stat.exists
-
-- name: Delete File {{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json if it exists
-  file:
-    state: absent
-    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
-  when: file_exist_apps.stat.exists
-
-# - name: Service Catalog and Legacy App service use cases
-#   include_tasks: "service-catalog-and-legacy-apps.yaml"
-#   with_items: "{{ configSets }}"
-#   loop_control:
-#     loop_var: item2
+- name: Service Catalog and Legacy App service use cases
+  include_tasks: "service-catalog-and-legacy-apps.yaml"
+  with_items: "{{ configSets }}"
+  loop_control:
+    loop_var: item2
 
 - name: Move AS3 application service(s) in BIG-IQ application dashboard.
   include_tasks: "move-app-services.yaml"
@@ -174,8 +168,13 @@
   loop_control:
     loop_var: item3
 
-## SHOW any service catalog template or legacy apps removed which needs to be re-created manually
-- name: Service Catalog or Legacy App Services removed which needs to be re-created manually on the BIG-IQ.
+## SHOW any service catalog template  removed which needs to be re-created manually
+- name: App services deployed with Service Catalog templates removed which needs to be re-created manually on the BIG-IQ as Legacy App Services
   debug:
     msg:
-      - "{{ sc_legacy_apps }}"
+      - "{{ sc_apps|default([]) }}"
+      - "Visit following link to learn how to convert Service Catalog Apps to Legacy Apps"
+      - "https://clouddocs.f5.com/training/community/big-iq-cloud-edition/html/class1/module6/lab4.html"
+  when: 
+    - sc_apps is defined
+    - sc_apps | length > 0

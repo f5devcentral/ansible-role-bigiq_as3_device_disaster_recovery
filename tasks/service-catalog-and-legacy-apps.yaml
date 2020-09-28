@@ -1,8 +1,57 @@
 ---
-
-- name: App Service Name
+#### If Legacy => Re-create Legacy App
+- name: Get currentConfigVirtualServerReferences from classicConfigs
   set_fact:
-    app_service_name: "{{ item2.configSetName }}"
+    currentConfigVirtualServerReferences: "{{ classicConfigs | json_query(query) }}"
+  vars: 
+    query: "[?name=='{{ item2.configSetName }}'].currentConfigVirtualServerReferences"
+  when: item2.classicConfigReference is defined
+  
+- name: Re-create Legacy App - {{ item2.configSetName }}
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/classic-app-service"
+    method: POST
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      Content-Type: application/json
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+    body: |
+      {
+          "legacyApplicationServiceRequests": [
+              {
+                  "configSetName": "{{ item2.configSetName }}",
+                  "currentConfigVirtualServerReferences": {{ currentConfigVirtualServerReferences | first }},
+                  "deviceReference": {
+                      "link": "https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machine_id  }}"
+                  },
+                  "applicationServiceType": "{{ item2.applicationServiceType }}",
+                  "mode": "CREATE"
+              }
+          ]
+      }
+    body_format: json
+    status_code: 202
+  register: json_response
+  when: item2.classicConfigReference is defined
+  ignore_errors: yes
+
+- name: Check Legacy App creation status
+  uri:
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/classic-app-service/{{ json_response.json.id }}"
+    timeout: "{{ timeout }}"
+    validate_certs: "{{ provider.validate_certs }}"
+    headers:
+      Content-Type: application/json
+      X-F5-Auth-Token: "{{ f5_auth_token }}"
+  register: status
+  until: status.json.status in ['FINISHED', 'FAILED']
+  retries: 40
+  delay: 10
+  failed_when: "'FAILED' in status.json.status"
+  changed_when: "'FINISHED' in status.json.status"
+  when: item2.classicConfigReference is defined
+  ignore_errors: yes
 
 #### If Service Castalog => Convert to Legacy
 # resources."ltm:virtual::b487671f29ba".[parameters.destinationAddress]
@@ -10,11 +59,3 @@
 # - name: Action if Service Catalog
 #   ...
 #   when: item2.templateReference is defined
-
-#### If Legacy => Re-create Legacy App
-# details in here {{ classicConfigs }} can filter on the name = item2
-
-# - name: Action if Legacy App
-#   ...
-#   when: item2.classicConfigReference is defined
-

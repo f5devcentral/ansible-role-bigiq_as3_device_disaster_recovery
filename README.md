@@ -6,25 +6,26 @@ The role is supporting RMA device that was a member of an **Active-Standby HA pa
 The role is relevant when the RMA device was the **target of AS3 deployments**.
 
 Steps executed by the role automatically:
-1. Backup AS3 declarations from RMA device
-2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+1. Backup AS3 declarations and Legacy App Services from RMA device
+2. Delete the Application services on BIG-IQ dashboard using RMA device (apps won't be deleted on the BIG-IP but only on BIG-IQ)
 3. Remove the RMA device from BIG-IQ
 4. Add back the RMA device in BIG-IQ (assuming it has been replaced and UCS backup restored using the same IP address as before)
-5. Re-deploy the AS3 application services on the new target device (no service impact)
+5. Re-deploy the AS3 and Legacy Application Services on the new target device (no service impact)
 
 # Prerequisites
 
+- Make sure device part of the same cluster can be successfully discover and imported in BIG-IQ
 - The RMA device have been replaced before running this role and is up and running, HA cluster sync (*if not standalone*)
 - Install following galaxy roles:
   - ``ansible-galaxy install f5devcentral.atc_deploy --force``
   - ``ansible-galaxy install f5devcentral.bigiq_move_app_dashboard --force``
 - Install following galaxy collection:
-  - ``ansible-galaxy collection install f5networks.f5_modules --force`` (for latest up to date [bigiq_device_discovery](https://docs.ansible.com/ansible/latest/modules/bigiq_device_discovery_module.html) module)
+  - ``ansible-galaxy collection install f5networks.f5_modules --force`` (see [bigiq_device_discovery](https://docs.ansible.com/ansible/latest/modules/bigiq_device_discovery_module.html) module)
 
 # Limitations
 
-- The RMA device must have **ONLY AS3 application services** (no Service Catalog or Legacy services).
-If you are interested to support those types of app services [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
+- The role will only restore **AS3 application services** and **Legacy Application Services** (no App Services deployed using Service Catalog templates).
+For app services deployed using Service Catalog templates, it is recommended to [convert](https://clouddocs.f5.com/training/community/big-iq-cloud-edition/html/class1/module6/lab4.html) it to Legacy App Services.
 - RMA device IP address must be the same after the device has been replaced & restore.
 - This role does NOT save the Application Services **Custom Application Roles** assigned to a user or groups of users for the applications hosted on the RMA device. 
 You may not use this role if you are in this case. If you are interested to support the user/application roles relation [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
@@ -33,7 +34,7 @@ You may not use this role if you are in this case. If you are interested to supp
 
 - The Analytics history on BIG-IQ for this device won't be lost but BIG-IQ won't collect analytics when the RMA device is removed then re-added to the BIG-IQ.
 - The re-discover & re-import of the RMA device repaired will use the following conflict resolution policy **Use BIG-IP** by default.
-- If you had users assigned to the AS3 application services in RMA device, you will need to re-assign the application services roles to those users after the role is executed
+- If you had users assigned to the AS3 or Legacy application services in RMA device, you will need to re-assign the application services roles to those users after the role is executed
 
 ## Role Variables
 
@@ -61,6 +62,10 @@ for the **CM BIG-IQ** device.
       new_as3_target: 10.1.1.8 # new AS3 target
       device_username: admin # RMA device user
       device_password: secret # RMA device password
+      device_port: 443  # RMA device port
+
+      # Skip step 3 and 4 (add and remove RMA device)
+      skip_add_remove_rma_device: false
 
       standalone: false # Set to true if RMA device is a standalone device
 
