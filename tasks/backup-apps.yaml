@@ -21,6 +21,7 @@
   copy:
     src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json.bkp.{{ ansible_date_time.iso8601 }}"
+  delegate_to: localhost
   when: file_exist_apps.stat.exists
 
 - name: Create a directory if it does not exist where we will store the AS3 declaration
@@ -51,22 +52,32 @@
   copy:
     src: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+  delegate_to: localhost
   when: file_exist_all.stat.exists
 
 - name: Save output in a file ALL declarations stored on BIG-IQ
-  local_action: copy content={{ json_response1.json | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
+  copy:
+    content: "{{ json_response1.json | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_as3_apps.json"
+  delegate_to: localhost
   when: not file_exist_all.stat.exists
 
 # Backup declaration from device if BIG-IQ has more than 1 device
 - name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - More than 1 device
-  local_action: copy content={{ json_response1 | json_query(query) | first | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  copy:
+    content: "{{ json_response1 | json_query(query) | first | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
   vars:
     query: "json[?target.address=='{{ current_as3_target }}']"
+  delegate_to: localhost
   when: json_response1.json.class is not defined
 
 # Backup declaration from device if BIG-IQ only 1 device
 - name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - 1 device
-  local_action: copy content={{ json_response1.json | to_nice_json }} dest="{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  copy:
+    content: "{{ json_response1.json | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+  delegate_to: localhost
   when: json_response1.json.class is defined
 
 ##### Create new_as3_target AS3 declarations
@@ -74,18 +85,21 @@
   copy:
     src: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
     dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+  delegate_to: localhost
 
 - name: Remove BIG-IQ id
   lineinfile: 
     dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
     state: absent 
     regexp: '^    "id":'
+  delegate_to: localhost
 
 - name: Replace target BIG-IP with new target {{ new_as3_target }}
   lineinfile:
     path: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
     regexp: '^        "address":'
     line: '        "address": "{{ new_as3_target }}"'
+  delegate_to: localhost
 
 ### Config Set
 - name: Get machineId of the device
@@ -141,7 +155,10 @@
   when: file_exist_all_configSets.stat.exists
 
 - name: Save output in a file of all configSets for the device current_as3_target
-  local_action: copy content={{ configSets | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
+  copy:
+    content: "{{ configSets | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
+  delegate_to: localhost
   when: not file_exist_all_configSets.stat.exists
 
 ### Backup Legacy App details (if any)
@@ -173,14 +190,19 @@
 - name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists
   stat:
     path: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+  delegate_to: localhost
   register: file_exist_all_classicConfigs
 
 - name: Backup the file is it exist already 
   copy:
     src: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+  delegate_to: localhost
   when: file_exist_all_classicConfigs.stat.exists
 
 - name: Save output in a file of all classicConfigs for the device current_as3_target
-  local_action: copy content={{ classicConfigs | to_nice_json }} dest="{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+  copy:
+    content: "{{ classicConfigs | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
+  delegate_to: localhost
   when: not file_exist_all_classicConfigs.stat.exists
