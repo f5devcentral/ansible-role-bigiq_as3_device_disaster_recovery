@@ -80,9 +80,7 @@
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
     provider: "{{ provider }}"
-  when: 
-    - not standalone | bool
-    - apm is not defined
+  when: apm is not defined
   ignore_errors: yes
 
 - name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster
@@ -104,30 +102,7 @@
     use_bigiq_sync: "{{ use_bigiq_sync }}"
     force: yes # Force Re-discovery and Import on the new_as3_target
     provider: "{{ provider }}"
-  when:
-    - not standalone | bool
-    - apm is not defined
-  ignore_errors: yes
-
-- name: Step 4 - Add back the device {{ current_as3_target }} and its config - Standalone
-  f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
-    device_port: "{{ device_port }}"
-    device_username: "{{ device_username }}"
-    device_password: "{{ device_password }}"
-    modules: "{{ modules | list }}"
-    conflict_policy: "{{ conflict_policy }}"
-    device_conflict_policy: "{{ device_conflict_policy }}"
-    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
-    statistics:
-      enable: "{{ enable }}"
-      stat_modules: "{{ stat_modules | list }}"
-      interval: "{{ interval }}"
-      zone: "{{ zone }}"
-    provider: "{{ provider }}"
-  when: 
-    - standalone | bool
-    - apm is not defined
+  when: apm is not defined
   ignore_errors: yes
 
 # If BIG-IP has access module provisionned
@@ -152,9 +127,7 @@
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
     provider: "{{ provider }}"
-  when: 
-    - not standalone | bool
-    - apm is defined
+  when: apm is defined
   ignore_errors: yes
 
 - name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster with APM
@@ -179,31 +152,5 @@
     use_bigiq_sync: "{{ use_bigiq_sync }}"
     force: yes # Force Re-discovery and Import on the new_as3_target
     provider: "{{ provider }}"
-  when:
-    - not standalone | bool
-    - apm is defined
-  ignore_errors: yes
-
-- name: Step 4 - Add back the device {{ current_as3_target }} and its config - Standalone with APM
-  f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
-    device_port: "{{ device_port }}"
-    device_username: "{{ device_username }}"
-    device_password: "{{ device_password }}"
-    modules: "{{ modules | list }}"
-    conflict_policy: "{{ conflict_policy }}"
-    device_conflict_policy: "{{ device_conflict_policy }}"
-    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
-    access_group_name: "{{ access_group_name }}"
-    access_group_first_device: "{{ access_group_first_device }}"
-    access_conflict_policy: "{{ access_conflict_policy }}"
-    statistics:
-      enable: "{{ enable }}"
-      stat_modules: "{{ stat_modules | list }}"
-      interval: "{{ interval }}"
-      zone: "{{ zone }}"
-    provider: "{{ provider }}"
-  when: 
-    - standalone | bool
-    - apm is defined
+  when: apm is defined
   ignore_errors: yes

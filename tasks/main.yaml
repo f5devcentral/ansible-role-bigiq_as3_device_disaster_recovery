@@ -95,7 +95,7 @@
 
 - name: Confirm Proceed
   pause:
-    prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and fully functioning.\n
+    prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and restored WITHOUT UCS backup.\n
              \nSteps executed by the role:
              \n1. Backup AS3 declarations and Legacy App Services from RMA device {{ current_as3_target }} 
              \n2. Delete the Application Services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
@@ -113,7 +113,6 @@
 
 - name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
   include_tasks: "check-bigip-in-same-cluster.yaml"
-  when: not standalone
 
 #1. Backup AS3 declarations from RMA device {{ current_as3_target }} 
 - name: Step 1 - Backup device's AS3 declarations and existing previous 

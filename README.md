@@ -1,21 +1,23 @@
 # Ansible Role: bigiq_as3_device_disaster_recovery
 
-Performs a series of steps needed in BIG-IQ to replace a RMA (Return Merchandise Authorization) device which had AS3 application services deployed.
+Performs a series of steps needed in BIG-IQ to replace a RMA (Return Merchandise Authorization) device part of a HA-pair which had AS3 application services deployed.
 
-The role is supporting RMA device that was a member of an **Active-Standby HA pair** or **Standalone** in BIG-IQ. 
+The role must be used **ONLY** in the case the RMA device did **NOT** have a **UCS backup** and was rebuilt manually and added back in the **Active-Standby HA pair**.
 The role is relevant when the RMA device was the **target of AS3 deployments**.
 
 Steps executed by the role automatically:
 1. Backup AS3 declarations and Legacy App Services from RMA device
 2. Delete the Application services on BIG-IQ dashboard using RMA device (apps won't be deleted on the BIG-IP but only on BIG-IQ)
 3. Remove the RMA device from BIG-IQ
-4. Add back the RMA device in BIG-IQ (assuming it has been replaced and UCS backup restored using the same IP address as before)
+4. Add back the RMA device in BIG-IQ
 5. Re-deploy the AS3 and Legacy Application Services on the new target device (no service impact)
 
 # Prerequisites
 
+- Make sure you do NOT have a UCS backup to restore the device trust between BIG-IQ and BIG-IP.
+  If you have a UCS backup, restore the UCS to the RMA device. This role does **NOT** need to be used.
 - Make sure device part of the same cluster can be successfully discover and imported in BIG-IQ
-- The RMA device have been replaced before running this role and is up and running, HA cluster sync (*if not standalone*)
+- The RMA device have been replaced before running this role and is up and running, HA cluster sync
 - Install following galaxy roles:
   - ``ansible-galaxy install f5devcentral.atc_deploy --force``
   - ``ansible-galaxy install f5devcentral.bigiq_move_app_dashboard --force``
@@ -26,8 +28,8 @@ Steps executed by the role automatically:
 
 - The role will only restore **AS3 application services** and **Legacy Application Services** (no App Services deployed using Service Catalog templates).
 For app services deployed using Service Catalog templates, it is recommended to [convert](https://clouddocs.f5.com/training/community/big-iq-cloud-edition/html/class1/module6/lab4.html) it to Legacy App Services.
-- RMA device IP address must be the same after the device has been replaced & restore.
-- This role does NOT save the Application Services **Custom Application Roles** assigned to a user or groups of users for the applications hosted on the RMA device. 
+- RMA device IP address must be the same after the device has been replaced & restore (without a UCS)
+- This role does NOT save the **Custom Application Roles** assigned to a user or groups of users for the applications hosted on the RMA device. 
 You may not use this role if you are in this case. If you are interested to support the user/application roles relation [open an issue on GitHub](https://github.com/f5devcentral/ansible-role-bigiq_as3_device_disaster_recovery/issues).
 
 # Notes
@@ -52,8 +54,7 @@ for the **CM BIG-IQ** device.
           auth_provider: tmos
           validate_certs: false
 
-- RMA device is part of a BIG-IP **Active-Standby HA pair**: ``current_as3_target`` and ``new_as3_target`` must be part of the same Cluster in BIG-IQ.
-- RMA device is a **Standalone** BIG-IP: ``current_as3_target`` and ``new_as3_target`` can be the same or different IP.
+RMA device is part of a BIG-IP **Active-Standby HA pair**: ``current_as3_target`` and ``new_as3_target`` must be part of the same Cluster in BIG-IQ.
 
       # Working directory to store backup files on your local machine
       dir_as3: ~/tmp
@@ -66,8 +67,6 @@ for the **CM BIG-IQ** device.
 
       # Skip step 3 and 4 (add and remove RMA device)
       skip_add_remove_rma_device: false
-
-      standalone: false # Set to true if RMA device is a standalone device
 
       # Conflict resolution options
       conflict_policy: use_bigip
@@ -162,7 +161,7 @@ Please, make sure you verify the content of the json files before restoring any 
                 apps: "{{ lookup('file', '~/tmp/10.1.1.4_bigiq_apps_mapping.json.bkp') }}"
             register: status
 
-``10.1.1.7`` is the BIG-IP. ``10.1.1.4`` is the BIG-IQ (or ``ansible_host``).
+``10.1.1.7`` is the BIG-IP. ``10.1.1.4`` and ``ansible_host`` is the BIG-IQ.
 
 ## License
 

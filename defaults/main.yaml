@@ -7,8 +7,6 @@ device_port: 443
 
 skip_add_remove_rma_device: false
 
-standalone: false # Set to true if RMA device is a standalone device
-
 # Conflict resolution options
 conflict_policy: use_bigip
 device_conflict_policy: use_bigip
