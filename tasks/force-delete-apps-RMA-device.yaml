@@ -1,4 +1,6 @@
 ---
+- name: Re authenticate to BIG-IQ
+  include_tasks: authentication.yaml
 
 - name: Check if configSetName exist
   uri:

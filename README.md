@@ -5,7 +5,7 @@ Performs a series of steps needed in BIG-IQ to replace a RMA (Return Merchandise
 The role must be used **ONLY** in the case the RMA device did **NOT** have a **UCS backup** and was rebuilt manually and added back in the **Active-Standby HA pair**.
 The role is relevant when the RMA device was the **target of AS3 deployments**.
 
-Steps executed by the role automatically:
+Steps executed by the role automatically: *(role will pause between each step)*
 1. Backup AS3 declarations and Legacy App Services from RMA device
 2. Delete the Application services on BIG-IQ dashboard using RMA device (apps won't be deleted on the BIG-IP but only on BIG-IQ)
 3. Remove the RMA device from BIG-IQ
