@@ -16,7 +16,7 @@
   vars: 
     query: "json.items[0].id"
 
-- name: Delete all sslCertReferences and sslKeyReferences pinned on {{ current_as3_target }} and {{ new_as3_target }} 
+- name: Delete all sslCertReferences, sslKeyReferences and iruleReferences pinned on {{ current_as3_target }} and {{ new_as3_target }} 
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node/{{ object_pinning_id }}"
     method: PATCH
@@ -29,7 +29,8 @@
       {
         "id": "{{ object_pinning_id }}",
         "sslCertReferences": [],
-        "sslKeyReferences": []
+        "sslKeyReferences": [],
+        "iruleReferences": []
       }
     body_format: json
   register: json_response

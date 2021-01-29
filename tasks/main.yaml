@@ -63,12 +63,13 @@
       loginProviderName: tmos
     body_format: json
   register: authtoken2
+  ignore_errors: True
 
-- name: Fail if Authentication to the RMA device fails
-  fail:
-    msg: "Cannot authenticate to RMA BIG-IP {{ current_as3_target }}:{{ target_port }}, please verify the BIG-IP has been restored and accessible."
+- name: Show warning if Authentication to the RMA device fails
+  debug:
+    msg: "Cannot authenticate to RMA BIG-IP {{ current_as3_target }}:{{ device_port }}, please verify the BIG-IP has been restored and accessible."
   when: authtoken2 is not success
-
+  
 - name: Confirm Proceed
   pause:
     prompt: "\nConfirm the RMA device {{ current_as3_target }} was replaced and restored WITHOUT UCS backup.\n

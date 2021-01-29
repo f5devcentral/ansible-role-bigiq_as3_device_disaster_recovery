@@ -169,7 +169,7 @@ Apache
 
 ## Author Information
 
-This role was created in 2020 by [Romain Jouhannet](https://github.com/rjouhann).
+This role was created in 2021 by [Romain Jouhannet](https://github.com/rjouhann).
 
 [1]: https://galaxy.ansible.com/f5devcentral/bigiq_pinning_deploy_objects
 
