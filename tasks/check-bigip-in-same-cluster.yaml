@@ -1,7 +1,10 @@
 ---
-- name: Get details for device {{ current_as3_target }}
+- fail: msg="The variable 'bigip2_target' is not defined" (only if HA)
+  when: bigip2_target is undefined
+
+- name: Get details for device {{ bigip1_target }}
   uri:
-    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ current_as3_target }}...{{ current_as3_target }}'"
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ bigip1_target }}...{{ bigip1_target }}'"
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"
@@ -9,18 +12,18 @@
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: json_response
 
-- name: Get the clusterName for {{ current_as3_target }}
+- name: Get the clusterName for {{ bigip1_target }}
   set_fact:
     clusterName_device1: "{{ json_response | json_query(query) | join(' ') }}"
   vars: 
-    query: "json.items[?address=='{{ current_as3_target }}'].properties.clusterName"
+    query: "json.items[?address=='{{ bigip1_target }}'].properties.clusterName"
 
 - debug:
     var: clusterName_device1
 
-- name: Get details for device {{ new_as3_target }}
+- name: Get details for device {{ bigip2_target }}
   uri:
-    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ new_as3_target }}...{{ new_as3_target }}'"
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ bigip2_target }}...{{ bigip2_target }}'"
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"
@@ -28,15 +31,15 @@
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: json_response
 
-- name: Get the clusterName for {{ new_as3_target }}
+- name: Get the clusterName for {{ bigip2_target }}
   set_fact:
     clusterName_device2: "{{ json_response | json_query(query) | join(' ') }}"
   vars: 
-    query: "json.items[?address=='{{ new_as3_target }}'].properties.clusterName"
+    query: "json.items[?address=='{{ bigip2_target }}'].properties.clusterName"
 
 - debug:
     var: clusterName_device2
 
 - fail:
-    msg: "{{ current_as3_target }} must be in the same cluster on BIG-IQ as {{ new_as3_target }}"
+    msg: "{{ bigip1_target }} must be in the same cluster on BIG-IQ as {{ bigip2_target }}"
   when:  clusterName_device1 != clusterName_device2

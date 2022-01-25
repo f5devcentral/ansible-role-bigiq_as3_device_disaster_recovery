@@ -4,8 +4,8 @@ dependencies: []
 galaxy_info:
   role_name: bigiq_as3_device_disaster_recovery
   author: rjouhann
-  description: Replace a RMA device part of a HA-pair on BIG-IQ with AS3 application services deployed on.
-  company: F5 Networks
+  description: Performs a series of steps needed in BIG-IQ to remove and add again a BIG-IP managed by BIG-IQ with AS3 or Legacy application services deployed on it.
+  company: F5
   license: Apache
   min_ansible_version: 2.7
   platforms:

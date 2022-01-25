@@ -1,8 +1,8 @@
 ---
 # Pre-step
-- name: Pre-Step 3 - Collect device info {{ current_as3_target }}
+- name: Pre-Step 3 - Collect device info {{ bigip1_target }}
   uri:
-    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/machineid-resolver?$filter=address%20eq%20'{{ current_as3_target }}'
+    url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/machineid-resolver?$filter=address%20eq%20'{{ bigip1_target }}'
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"
@@ -11,7 +11,7 @@
     status_code: 200, 202
   register: json_response
 
-- name: Pre-Step 3 - Collect module imported on {{ current_as3_target }} before removal
+- name: Pre-Step 3 - Collect module imported on {{ bigip1_target }} before removal
   set_fact:
     modules: "{{ json_response | json_query(query) 
                 | reject('search','BigIPDevice') | list
@@ -43,7 +43,7 @@
     apm: true
   when: '"apm" in modules'
 
-- name: Pre-Step 3 - Collect Access Group name on {{ current_as3_target }} before removal
+- name: Pre-Step 3 - Collect Access Group name on {{ bigip1_target }} before removal
   set_fact:
     access_group_name: "{{ json_response | json_query(query) }}"
   vars: 
@@ -54,17 +54,17 @@
     var: access_group_name
   when: apm is defined
 
-# 3. Remove the RMA device {{ current_as3_target }} from BIG-IQ
-- name: Step 3 - Remove discovered device {{ current_as3_target }} and its config
+# 3. Remove the device {{ bigip1_target }} from BIG-IQ
+- name: Step 3 - Remove discovered device {{ bigip1_target }} and its config
   f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
+    device_address: "{{ bigip1_target }}"
     state: absent
     provider: "{{ provider }}"
 
-# 4. Add back the RMA device {{ current_as3_target }} in BIG-IQ
-- name: Step 4 - Add back the device {{ current_as3_target }} and its config - HA cluster
+# 4. Add back the device {{ bigip1_target }} in BIG-IQ
+- name: Step 4 - Add back the device {{ bigip1_target }} and its config - HA cluster (no APM)
   f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
+    device_address: "{{ bigip1_target }}"
     device_port: "{{ device_port }}"
     device_username: "{{ device_username }}"
     device_password: "{{ device_password }}"
@@ -83,9 +83,9 @@
   when: apm is not defined
   ignore_errors: yes
 
-- name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster
+- name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster (no APM)
   f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ new_as3_target }}"
+    device_address: "{{ bigip2_target }}"
     device_port: "{{ device_port }}"
     device_username: "{{ device_username }}"
     device_password: "{{ device_password }}"
@@ -100,15 +100,15 @@
       zone: "{{ zone }}"
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
-    force: yes # Force Re-discovery and Import on the new_as3_target
+    force: yes # Force Re-discovery and Import on the bigip2_target
     provider: "{{ provider }}"
   when: apm is not defined
   ignore_errors: yes
 
 # If BIG-IP has access module provisionned
-- name: Step 4 - Add back the device {{ current_as3_target }} and its config - HA cluster with APM
+- name: Step 4 - Add back the device {{ bigip1_target }} and its config - HA cluster with APM
   f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ current_as3_target }}"
+    device_address: "{{ bigip1_target }}"
     device_port: "{{ device_port }}"
     device_username: "{{ device_username }}"
     device_password: "{{ device_password }}"
@@ -130,9 +130,9 @@
   when: apm is defined
   ignore_errors: yes
 
-- name: Step 4 - Add back the device {{ new_as3_target }} and its config - HA cluster with APM
+- name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster with APM
   f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ new_as3_target }}"
+    device_address: "{{ bigip2_target }}"
     device_port: "{{ device_port }}"
     device_username: "{{ device_username }}"
     device_password: "{{ device_password }}"
@@ -150,7 +150,7 @@
       zone: "{{ zone }}"
     ha_name: "{{ clusterName_device1 }}"
     use_bigiq_sync: "{{ use_bigiq_sync }}"
-    force: yes # Force Re-discovery and Import on the new_as3_target
+    force: yes # Force Re-discovery and Import on the bigip2_target
     provider: "{{ provider }}"
   when: apm is defined
   ignore_errors: yes

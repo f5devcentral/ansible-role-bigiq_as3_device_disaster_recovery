@@ -5,6 +5,8 @@ dir_as3: ~/tmp # Working directory to store migration files on your local machin
 
 device_port: 443
 
+standalone: false
+
 skip_add_remove_rma_device: false
 
 # Conflict resolution options
@@ -14,7 +16,7 @@ versioned_conflict_policy: keep_version
 access_conflict_policy: use_bigip
 access_group_first_device: no
 
-# CLuster Sync
+# Cluster Sync
 use_bigiq_sync: yes
 
 # Stats options

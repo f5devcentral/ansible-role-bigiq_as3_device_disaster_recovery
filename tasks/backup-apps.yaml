@@ -1,14 +1,14 @@
 ---
-# Backup current_as3_target AS3 declarations
-- name: Check that the {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json exists
+# Backup bigip1_target AS3 declarations
+- name: Check that the {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json exists
   stat:
-    path: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+    path: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
   register: file_exist
 
 - name: Backup the file is it exist already (in case of launching the module multiple times with failure)
   copy:
-    src: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
-    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
+    src: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json.bkp.{{ ansible_date_time.iso8601 }}"
   when: file_exist.stat.exists
 
 # Backup Mapping files if it exists
@@ -63,48 +63,51 @@
   when: not file_exist_all.stat.exists
 
 # Backup declaration from device if BIG-IQ has more than 1 device
-- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - More than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json - More than 1 device
   copy:
     content: "{{ json_response1 | json_query(query) | first | to_nice_json }}"
-    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
   vars:
-    query: "json[?target.address=='{{ current_as3_target }}']"
+    query: "json[?target.address=='{{ bigip1_target }}']"
   delegate_to: localhost
   when: json_response1.json.class is not defined
 
 # Backup declaration from device if BIG-IQ only 1 device
-- name: Save output in a file {{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json - 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json - 1 device
   copy:
     content: "{{ json_response1.json | to_nice_json }}"
-    dest: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
   delegate_to: localhost
   when: json_response1.json.class is defined
 
-##### Create new_as3_target AS3 declarations
-- name: Make a copy of previous file to {{ dir_as3 }}/{{ current_as3_target }} if already exist
+##### Create bigip2_target AS3 declarations
+- name: Make a copy of previous file to {{ dir_as3 }}/{{ bigip1_target }} if already exist
   copy:
-    src: "{{ dir_as3 }}/{{ current_as3_target }}_bigip_as3_apps.json"
-    dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+    src: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
   delegate_to: localhost
+  when: not standalone | bool
 
 - name: Remove BIG-IQ id
   lineinfile: 
-    dest: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
     state: absent 
     regexp: '^    "id":'
   delegate_to: localhost
+  when: not standalone | bool
 
-- name: Replace target BIG-IP with new target {{ new_as3_target }}
+- name: Replace target BIG-IP with new target {{ bigip2_target }}
   lineinfile:
-    path: "{{ dir_as3 }}/{{ new_as3_target }}_bigip_as3_apps.json"
+    path: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
     regexp: '^        "address":'
-    line: '        "address": "{{ new_as3_target }}"'
+    line: '        "address": "{{ bigip2_target }}"'
   delegate_to: localhost
-
+  when: not standalone | bool
+  
 ### Config Set
 - name: Get machineId of the device
   uri:
-    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ current_as3_target }}...{{ current_as3_target }}'"
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ bigip1_target }}...{{ bigip1_target }}'"
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"
@@ -116,9 +119,9 @@
   set_fact:
     machine_id: "{{ json_response2 | json_query(query) | join(' ') }}"
   vars: 
-    query: "json.items[?address=='{{ current_as3_target }}'].machineId"
+    query: "json.items[?address=='{{ bigip1_target }}'].machineId"
 
-- name: Get ALL app services name (configSetName) in the device specified {{ current_as3_target }}
+- name: Get ALL app services name (configSetName) in the device specified {{ bigip1_target }}
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/config-sets?$filter=deviceReference.link%20eq%20'https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machine_id }}'
     method: GET
@@ -129,7 +132,7 @@
     status_code: 200, 202
   register: json_response3
 
-- name: Get ALL config-sets for {{ current_as3_target }}
+- name: Get ALL config-sets for {{ bigip1_target }}
   set_fact:
     configSets: "{{ json_response3 | json_query(query) }}"
   vars: 
@@ -154,7 +157,7 @@
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json.bkp.{{ ansible_date_time.iso8601 }}"
   when: file_exist_all_configSets.stat.exists
 
-- name: Save output in a file of all configSets for the device current_as3_target
+- name: Save output in a file of all configSets for the device bigip1_target
   copy:
     content: "{{ configSets | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_configSets.json"
@@ -162,7 +165,7 @@
   when: not file_exist_all_configSets.stat.exists
 
 ### Backup Legacy App details (if any)
-- name: Get ALL legacy app services name (configSetName) in the device specified {{ current_as3_target }}
+- name: Get ALL legacy app services name (configSetName) in the device specified {{ bigip1_target }}
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/classic-configs?$filter=machineId%20eq%20'{{ machine_id }}'
     method: GET
@@ -173,7 +176,7 @@
     status_code: 200, 202
   register: json_response4
 
-- name: Get ALL classic-configs for {{ current_as3_target }}
+- name: Get ALL classic-configs for {{ bigip1_target }}
   set_fact:
     classicConfigs: "{{ json_response4 | json_query(query) }}"
   vars: 
@@ -200,7 +203,7 @@
   delegate_to: localhost
   when: file_exist_all_classicConfigs.stat.exists
 
-- name: Save output in a file of all classicConfigs for the device current_as3_target
+- name: Save output in a file of all classicConfigs for the device bigip1_target
   copy:
     content: "{{ classicConfigs | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigip_legacy_apps.json"
