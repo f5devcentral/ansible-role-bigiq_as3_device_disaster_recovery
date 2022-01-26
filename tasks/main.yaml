@@ -3,16 +3,24 @@
   set_fact:
     provider: "{{ provider }}"
 
-- fail: msg="The variable 'device_username' is not defined"
+- name: Verify device_username properly set
+  fail:
+    msg: "The variable 'device_username' is not defined"
   when: device_username is undefined
 
-- fail: msg="The variable 'device_password' is not defined"
+- name: Verify device_password properly set
+  fail:
+    msg: "The variable 'device_password' is not defined"
   when: device_password is undefined
 
-- fail: msg="The variable 'dir_as3' is not defined"
+- name: Verify dir_as3 properly set
+  fail:
+    msg: "The variable 'dir_as3' is not defined"
   when: dir_as3 is undefined
 
-- fail: msg="The variable 'bigip1_target' is not defined"
+- name: Verify bigip1_target properly set
+  fail:
+    msg: "The variable 'bigip1_target' is not defined"
   when: bigip1_target is undefined
 
 - name: Install Galaxy roles and conditions
@@ -73,7 +81,7 @@
   
 - name: Confirm Proceed - HA use case
   pause:
-    prompt: "\nConfirm the device {{ bigip1_target }} was replaced and restored WITHOUT UCS backup - HA use case.\n
+    prompt: "\nConfirm devices {{ bigip1_target }} and {{ bigip2_target }} are correct (HA use case).\n
              \nSteps executed by the role:
              \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} 
              \n   -- PAUSE --
@@ -91,7 +99,7 @@
 
 - name: Confirm Proceed - Standalone use case
   pause:
-    prompt: "\nConfirm the device {{ bigip1_target }} was replaced and restored WITHOUT UCS backup - Standalone use case.\n
+    prompt: "\nConfirm the device {{ bigip1_target }} is correct (standalone use case).\n
              \nSteps executed by the role:
              \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} 
              \n   -- PAUSE --
@@ -107,8 +115,9 @@
   register: confirm_proceed
   when: standalone | bool
 
-- fail:
-    msg: "Please, Replace & Restore device {{ bigip1_target }} before using this role."
+- name: Check user input
+  fail:
+    msg: "Operation aborted."
   when: not confirm_proceed.user_input | bool
 
 #1. Backup AS3 declarations from device {{ bigip1_target }} 
@@ -120,7 +129,8 @@
     prompt: "\nConfirm proceed step 2 (delete the Application Services on BIG-IQ dashboard only, not on BIG-IP)? (yes/no)"
   register: confirm_proceed2
 
-- fail:
+- name: Check user input
+  fail:
     msg: "Existing..."
   when: not confirm_proceed2.user_input | bool
 
@@ -149,7 +159,8 @@
     prompt: "\nConfirm proceed step 3 and 4 (remove and add the device {{ bigip1_target }})? (yes/no)"
   register: confirm_proceed3
 
-- fail:
+- name: Check user input
+  fail:
     msg: "Existing..."
   when:  not confirm_proceed3.user_input | bool
 

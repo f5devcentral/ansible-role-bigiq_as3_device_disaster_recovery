@@ -96,6 +96,8 @@ If the device is not part of a HA cluster, set ``standalone`` to ``true`` and do
 
 See [bigiq_device_discovery](https://docs.ansible.com/ansible/latest/modules/bigiq_device_discovery_module.html) for Conflict resolution and stats options.
 
+Want to execute the role on BIG-IQ itself? [f5-bigiq-ansible-runner](https://github.com/f5devcentral/f5-big-iq-pm-team/tree/master/f5-bigiq-ansible-runner).
+
 ## Example Playbook - HA cluster use case
 
     ---
