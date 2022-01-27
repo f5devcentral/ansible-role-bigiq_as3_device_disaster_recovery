@@ -3,12 +3,12 @@
   set_fact:
     provider: "{{ provider }}"
 
-- name: Verify device_username properly set
+- name: Verify BIG-IP device_username properly set
   fail:
     msg: "The variable 'device_username' is not defined"
   when: device_username is undefined
 
-- name: Verify device_password properly set
+- name: Verify BIG-IP device_password properly set
   fail:
     msg: "The variable 'device_password' is not defined"
   when: device_password is undefined
@@ -18,7 +18,7 @@
     msg: "The variable 'dir_as3' is not defined"
   when: dir_as3 is undefined
 
-- name: Verify bigip1_target properly set
+- name: Verify BIG-IP bigip1_target properly set
   fail:
     msg: "The variable 'bigip1_target' is not defined"
   when: bigip1_target is undefined
@@ -29,7 +29,7 @@
 - name: Authenticate to BIG-IQ
   include_tasks: authentication.yaml
 
-- name: Get device provisioning type
+- name: Get BIG-IQ device provisioning type (CM or DCD)
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/system/provisioning"
     timeout: "{{ timeout }}"
@@ -43,7 +43,7 @@
     msg: "This role should be run against a CM device, but you appear to be running it against a DCD device"
   when: rprov.json.systemPersonality == 'logging_node'
 
-- name: Check if system is setup
+- name: Check if BIG-IQ system is setup
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/system/setup"
     timeout: "{{ timeout }}"
@@ -52,16 +52,16 @@
       X-F5-Auth-Token: "{{ f5_auth_token }}"
   register: setupchk
 
-- name: Stop if the system is not setup
+- name: Stop if the BIG-IQ system is not setup
   fail:
     msg: "The CM device has not been setup. Please onboard the DCD device first."
   when: setupchk.json.isSystemSetup is not defined or not setupchk.json.isSystemSetup|bool
 
-- name: Check both devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
+- name: Check both BIG-IP devices are part of the same BIG-IP cluster in BIG-IQ so all referenced objects and AS3 declarations are sync between the 2 devices
   include_tasks: "check-bigip-in-same-cluster.yaml"
   when: not standalone | bool
 
-- name: Get authentication token for BIG-IP {{ bigip1_target }}
+- name: Check if BIG-IP {{ bigip1_target }} is reachable and we can authenticate to it
   uri:
     url: "https://{{ bigip1_target }}:{{ device_port }}/mgmt/shared/authn/login"
     method: POST
@@ -72,12 +72,6 @@
       loginProviderName: tmos
     body_format: json
   register: authtoken2
-  ignore_errors: True
-
-- name: Show warning if Authentication to the device fails
-  debug:
-    msg: "Cannot authenticate to BIG-IP {{ bigip1_target }}:{{ device_port }}, please verify the BIG-IP has been restored and accessible."
-  when: authtoken2 is not success
   
 - name: Confirm Proceed - HA use case
   pause:
