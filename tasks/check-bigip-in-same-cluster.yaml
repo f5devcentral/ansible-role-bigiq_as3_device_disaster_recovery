@@ -23,7 +23,7 @@
 - debug:
     var: clusterName_device1
 
-- name: Get details for device {{  }}
+- name: Get details for device {{ bigip2_target }}
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/shared/resolver/device-groups/cm-adccore-allbigipDevices/devices?$filter=address%20eq%20'{{ bigip2_target }}...{{ bigip2_target }}'"
     method: GET
