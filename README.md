@@ -11,7 +11,7 @@ Steps executed by the ansible galaxy role automatically: *(role will pause betwe
 2. Delete the Application Services in BIG-IQ dashboard belonging to the device specified (app services won't be deleted on the BIG-IP but only on BIG-IQ from the Application Tab)
 3. Remove the device specified from BIG-IQ
 4. Re-discover and re-import the device specified in BIG-IQ (and re-discover other device part of the HA cluster, if applicable)
-5. Re-deploy the AS3 and Legacy application services on the specified device (no service impact) (using other device part of the HA cluster, if applicable)
+5. Re-deploy the AS3 and Legacy application services on the device (no service impact)
 
 # Prerequisites
 
@@ -33,7 +33,8 @@ You may not use this role if you are in this case. If you are interested to supp
 
 # Notes
 
-- In case you have an HA cluster, the application services will be re-deploy on the other BIG-IP pair ``bigip2_target`` (step 5).
+- The application services will be re-deploy on ``bigip1_target`` (step 5).
+- During the first step where the config is backup, the role backup both AS3 declaration using target for both devices (HA use case only).
 - The Analytics history on BIG-IQ for this device won't be lost but BIG-IQ won't collect analytics when the device is removed then re-added to the BIG-IQ.
 - The re-discover & re-import of the device specified will use the following conflict resolution policy **Use BIG-IP** by default.
 - If you had users assigned to the AS3 or Legacy application services in the device, you will need to re-assign the application services roles to those users after the role is executed

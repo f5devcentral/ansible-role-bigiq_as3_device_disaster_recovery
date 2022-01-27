@@ -62,6 +62,7 @@
   delegate_to: localhost
   when: not file_exist_all.stat.exists
 
+#### Backup bigip1_target
 # Backup declaration from device if BIG-IQ has more than 1 device
 - name: Save output in a file {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json - More than 1 device
   copy:
@@ -80,29 +81,48 @@
   delegate_to: localhost
   when: json_response1.json.class is defined
 
-##### Create bigip2_target AS3 declarations
-- name: Make a copy of previous file to {{ dir_as3 }}/{{ bigip1_target }} if already exist
+#### Backup bigip2_target
+# Backup declaration from device if BIG-IQ has more than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json - More than 1 device
   copy:
-    src: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
+    content: "{{ json_response1 | json_query(query) | first | to_nice_json }}"
+    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
+  vars:
+    query: "json[?target.address=='{{ bigip2_target }}']"
+  delegate_to: localhost
+  when: json_response1.json.class is not defined
+
+# Backup declaration from device if BIG-IQ only 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json - 1 device
+  copy:
+    content: "{{ json_response1.json | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
   delegate_to: localhost
-  when: not standalone | bool
+  when: json_response1.json.class is defined
 
-- name: Remove BIG-IQ id
-  lineinfile: 
-    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
-    state: absent 
-    regexp: '^    "id":'
-  delegate_to: localhost
-  when: not standalone | bool
+##### Replace bigip2_target with bigip1_target in AS3 declaration using bigip2_target as target
+# - name: Make a copy of previous file to {{ dir_as3 }}/{{ bigip2_target }} if already exist
+#   copy:
+#     src: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
+#     dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
+#   delegate_to: localhost
+#   when: not standalone | bool
 
-- name: Replace target BIG-IP with new target {{ bigip2_target }}
-  lineinfile:
-    path: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
-    regexp: '^        "address":'
-    line: '        "address": "{{ bigip2_target }}"'
-  delegate_to: localhost
-  when: not standalone | bool
+# - name: Remove BIG-IQ id
+#   lineinfile: 
+#     dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
+#     state: absent 
+#     regexp: '^    "id":'
+#   delegate_to: localhost
+#   when: not standalone | bool
+
+# - name: Replace target BIG-IP with new target {{ bigip1_target }}
+#   lineinfile:
+#     path: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
+#     regexp: '^        "address":'
+#     line: '        "address": "{{ bigip1_target }}"'
+#   delegate_to: localhost
+#   when: not standalone | bool
   
 ### Config Set
 - name: Get machineId of the device

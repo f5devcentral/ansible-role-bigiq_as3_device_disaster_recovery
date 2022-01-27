@@ -1,5 +1,5 @@
 ---
-- name: Setup provider and varables
+- name: Setup provider and variable
   set_fact:
     provider: "{{ provider }}"
 
@@ -72,28 +72,10 @@
       loginProviderName: tmos
     body_format: json
   register: authtoken2
-  
-- name: Confirm Proceed - HA use case
-  pause:
-    prompt: "\nConfirm devices {{ bigip1_target }} and {{ bigip2_target }} are correct (HA use case).\n
-             \nSteps executed by the role:
-             \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} 
-             \n   -- PAUSE --
-             \n2. Delete the Application Services in BIG-IQ dashboard belonging to {{ bigip1_target }} (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-             \n   -- PAUSE --
-             \n3. Remove the device {{ bigip1_target }} from BIG-IQ
-             \n4. Add back the device {{ bigip1_target }} in BIG-IQ
-             \n   -- PAUSE --
-             \n5. Re-deploy the AS3 and Legacy Application Services to {{ bigip2_target }} (no service impact)\n
-             \nNote: All app services custom roles will be removed in BIG-IQ.
-             \nYou will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
-             \n\nDo you want to proceed? (yes/no)"
-  register: confirm_proceed
-  when: not standalone | bool
 
-- name: Confirm Proceed - Standalone use case
+- name: Confirm Proceed
   pause:
-    prompt: "\nConfirm the device {{ bigip1_target }} is correct (standalone use case).\n
+    prompt: "\nConfirm the device {{ bigip1_target }} is correct.\n
              \nSteps executed by the role:
              \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} 
              \n   -- PAUSE --
@@ -104,10 +86,9 @@
              \n   -- PAUSE --
              \n5. Re-deploy the AS3 and Legacy Application Services to {{ bigip1_target }} (no service impact)\n
              \nNote: All app services custom roles will be removed in BIG-IQ.
-             \nYou will need to manually re-assign those to the users (if any assinged to it) after the role is completed.
+             \nYou will need to manually re-assign those to the users (if any assigned to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
   register: confirm_proceed
-  when: standalone | bool
 
 - name: Check user input
   fail:
@@ -176,30 +157,15 @@
 
 - name: Confirm Proceed Step 5
   pause:
-    prompt: "\nConfirm proceed step 5 (re-deploy the AS3 and Legacy Application Services on the new target device)? (yes/no)"
+    prompt: "\nConfirm proceed step 5 (re-deploy the AS3 and Legacy Application Services on {{ bigip1_target }})? (yes/no)"
   register: confirm_proceed4
 
 - fail:
     msg: "Existing..."
   when: not confirm_proceed4.user_input | bool
 
-# 5. Re-deploy the AS3 application services on the new target device {{ bigip2_target }} (no service impact)
-- name: ATC POST - deploy to {{ bigip2_target }} - HA use case # Post AS3 declaration to new device using atc_deploy
-  include_role:
-    name: f5devcentral.atc_deploy
-  vars:
-    atc_service: AS3
-    atc_method: POST
-    atc_declaration_file: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
-    atc_delay: 30
-    atc_retries: 30
-  register: atc_AS3_status
-  when: 
-    - confirm_proceed4.user_input | bool
-    - not standalone | bool
-
-# 5. Re-deploy the AS3 application services on the new target device {{ bigip1_target }} (no service impact)
-- name: ATC POST - deploy to {{ bigip1_target }} - Standalone use case # Post AS3 declaration to new device using atc_deploy
+# 5. Re-deploy the AS3 application services on {{ bigip1_target }} (no service impact)
+- name: ATC POST - deploy to {{ bigip1_target }} # Post AS3 declaration to new device using atc_deploy
   include_role:
     name: f5devcentral.atc_deploy
   vars:
@@ -211,7 +177,6 @@
   register: atc_AS3_status
   when: 
     - confirm_proceed4.user_input | bool
-    - standalone | bool
 
 - name: Service Catalog and Legacy App service use cases
   include_tasks: "service-catalog-and-legacy-apps.yaml"
