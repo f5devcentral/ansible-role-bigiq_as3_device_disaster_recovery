@@ -78,7 +78,7 @@ If the device is not part of a HA cluster, set ``standalone`` to ``true`` and do
       versioned_conflict_policy: keep_version
 
       # Cluster Sync
-      use_bigiq_sync: yes
+      use_bigiq_sync: no
 
       # Stats options  
       enable: yes 

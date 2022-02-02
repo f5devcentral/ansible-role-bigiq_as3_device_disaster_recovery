@@ -9,6 +9,8 @@ standalone: false
 
 skip_add_remove_rma_device: false
 
+## https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigiq_device_discovery_module.html
+
 # Conflict resolution options
 conflict_policy: use_bigip
 device_conflict_policy: use_bigip
@@ -17,7 +19,7 @@ access_conflict_policy: use_bigip
 access_group_first_device: no
 
 # Cluster Sync
-use_bigiq_sync: yes
+use_bigiq_sync: no
 
 # Stats options
 enable: yes
