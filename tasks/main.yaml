@@ -75,15 +75,18 @@
 
 - name: Confirm Proceed
   pause:
-    prompt: "\nConfirm the device {{ bigip1_target }} is correct.\n
-             \nSteps executed by the role:
-             \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} 
-             \n   -- PAUSE --
+    prompt: "\n!!! MAKE SURE YOU DID A FULL CM BACKUP BEFORE YOU PROCEED FURTHER !!!
+             \n
+             \nConfirm the device {{ bigip1_target }} is correct.
+             \n
+             \nSteps executed by the role:\n
+             \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} (will be saved under {{ dir_as3 }})
+             \n   -- PAUSE --\n
              \n2. Delete the Application Services in BIG-IQ dashboard belonging to {{ bigip1_target }} (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-             \n   -- PAUSE --
+             \n   -- PAUSE --\n
              \n3. Remove the device {{ bigip1_target }} from BIG-IQ
              \n4. Add back the device {{ bigip1_target }} in BIG-IQ
-             \n   -- PAUSE --
+             \n   -- PAUSE --\n
              \n5. Re-deploy the AS3 and Legacy Application Services to {{ bigip1_target }} (no service impact)\n
              \nNote: All app services custom roles will be removed in BIG-IQ.
              \nYou will need to manually re-assign those to the users (if any assigned to it) after the role is completed.

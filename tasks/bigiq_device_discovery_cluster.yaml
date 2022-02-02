@@ -83,27 +83,27 @@
   when: apm is not defined
   ignore_errors: yes
 
-- name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster (no APM)
-  f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ bigip2_target }}"
-    device_port: "{{ device_port }}"
-    device_username: "{{ device_username }}"
-    device_password: "{{ device_password }}"
-    modules: "{{ modules | list }}"
-    conflict_policy: "{{ conflict_policy }}"
-    device_conflict_policy: "{{ device_conflict_policy }}"
-    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
-    statistics:
-      enable: "{{ enable }}"
-      stat_modules: "{{ stat_modules | list }}"
-      interval: "{{ interval }}"
-      zone: "{{ zone }}"
-    ha_name: "{{ clusterName_device1 }}"
-    use_bigiq_sync: "{{ use_bigiq_sync }}"
-    force: yes # Force Re-discovery and Import on the bigip2_target
-    provider: "{{ provider }}"
-  when: apm is not defined
-  ignore_errors: yes
+# - name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster (no APM)
+#   f5networks.f5_modules.bigiq_device_discovery:
+#     device_address: "{{ bigip2_target }}"
+#     device_port: "{{ device_port }}"
+#     device_username: "{{ device_username }}"
+#     device_password: "{{ device_password }}"
+#     modules: "{{ modules | list }}"
+#     conflict_policy: "{{ conflict_policy }}"
+#     device_conflict_policy: "{{ device_conflict_policy }}"
+#     versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+#     statistics:
+#       enable: "{{ enable }}"
+#       stat_modules: "{{ stat_modules | list }}"
+#       interval: "{{ interval }}"
+#       zone: "{{ zone }}"
+#     ha_name: "{{ clusterName_device1 }}"
+#     use_bigiq_sync: "{{ use_bigiq_sync }}"
+#     force: yes # Force Re-discovery and Import on the bigip2_target
+#     provider: "{{ provider }}"
+#   when: apm is not defined
+#   ignore_errors: yes
 
 # If BIG-IP has access module provisionned
 - name: Step 4 - Add back the device {{ bigip1_target }} and its config - HA cluster with APM
@@ -130,27 +130,27 @@
   when: apm is defined
   ignore_errors: yes
 
-- name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster with APM
-  f5networks.f5_modules.bigiq_device_discovery:
-    device_address: "{{ bigip2_target }}"
-    device_port: "{{ device_port }}"
-    device_username: "{{ device_username }}"
-    device_password: "{{ device_password }}"
-    modules: "{{ modules | list }}"
-    conflict_policy: "{{ conflict_policy }}"
-    device_conflict_policy: "{{ device_conflict_policy }}"
-    versioned_conflict_policy: "{{ versioned_conflict_policy }}"
-    access_group_name: "{{ access_group_name }}"
-    access_group_first_device: "{{ access_group_first_device }}"
-    access_conflict_policy: "{{ access_conflict_policy }}"
-    statistics:
-      enable: "{{ enable }}"
-      stat_modules: "{{ stat_modules | list }}"
-      interval: "{{ interval }}"
-      zone: "{{ zone }}"
-    ha_name: "{{ clusterName_device1 }}"
-    use_bigiq_sync: "{{ use_bigiq_sync }}"
-    force: yes # Force Re-discovery and Import on the bigip2_target
-    provider: "{{ provider }}"
-  when: apm is defined
-  ignore_errors: yes
+# - name: Step 4 - Re-discover the device {{ bigip2_target }} and its config - HA cluster with APM
+#   f5networks.f5_modules.bigiq_device_discovery:
+#     device_address: "{{ bigip2_target }}"
+#     device_port: "{{ device_port }}"
+#     device_username: "{{ device_username }}"
+#     device_password: "{{ device_password }}"
+#     modules: "{{ modules | list }}"
+#     conflict_policy: "{{ conflict_policy }}"
+#     device_conflict_policy: "{{ device_conflict_policy }}"
+#     versioned_conflict_policy: "{{ versioned_conflict_policy }}"
+#     access_group_name: "{{ access_group_name }}"
+#     access_group_first_device: "{{ access_group_first_device }}"
+#     access_conflict_policy: "{{ access_conflict_policy }}"
+#     statistics:
+#       enable: "{{ enable }}"
+#       stat_modules: "{{ stat_modules | list }}"
+#       interval: "{{ interval }}"
+#       zone: "{{ zone }}"
+#     ha_name: "{{ clusterName_device1 }}"
+#     use_bigiq_sync: "{{ use_bigiq_sync }}"
+#     force: yes # Force Re-discovery and Import on the bigip2_target
+#     provider: "{{ provider }}"
+#   when: apm is defined
+#   ignore_errors: yes
