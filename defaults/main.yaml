@@ -5,9 +5,10 @@ dir_as3: ~/tmp # Working directory to store migration files on your local machin
 
 device_port: 443
 
+# Role options
 standalone: false
-
-skip_add_remove_rma_device: false
+skip_add_remove_rma_device: false # skip step 3
+only_app_deploy: false # skip step 1, 2 and 3 (use current backup files)
 
 ## https://docs.ansible.com/ansible/latest/collections/f5networks/f5_modules/bigiq_device_discovery_module.html
 

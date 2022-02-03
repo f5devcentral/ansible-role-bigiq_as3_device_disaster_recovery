@@ -55,14 +55,14 @@
   when: apm is defined
 
 # 3. Remove the device {{ bigip1_target }} from BIG-IQ
-- name: Step 3 - Remove discovered device {{ bigip1_target }} and its config
+- name: Step 3 A - Remove discovered device {{ bigip1_target }} and its config
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip1_target }}"
     state: absent
     provider: "{{ provider }}"
 
 # 4. Add back the device {{ bigip1_target }} in BIG-IQ
-- name: Step 4 - Add back the device {{ bigip1_target }} and its config - Standalone (no APM)
+- name: Step 3 B - Add back the device {{ bigip1_target }} and its config - Standalone (no APM)
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip1_target }}"
     device_port: "{{ device_port }}"
@@ -82,7 +82,7 @@
   ignore_errors: yes
 
 # If BIG-IP has access module provisionned
-- name: Step 4 - Add back the device {{ bigip1_target }} and its config - Standalone with APM
+- name: Step 3 B - Add back the device {{ bigip1_target }} and its config - Standalone with APM
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip1_target }}"
     device_port: "{{ device_port }}"

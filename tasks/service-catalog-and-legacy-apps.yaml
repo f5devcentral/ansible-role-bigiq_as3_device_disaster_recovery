@@ -1,8 +1,8 @@
 ---
 #### If Legacy => Re-create Legacy App
-- name: Get currentConfigVirtualServerReferences from classicConfigs
+- name: Get currentConfigVirtualServerReferences from classicConfigs_bigip1
   set_fact:
-    currentConfigVirtualServerReferences: "{{ classicConfigs | json_query(query) }}"
+    currentConfigVirtualServerReferences: "{{ classicConfigs_bigip1 | json_query(query) }}"
   vars: 
     query: "[?name=='{{ item2.configSetName }}'].currentConfigVirtualServerReferences"
   when: item2.classicConfigReference is defined
@@ -23,7 +23,7 @@
                   "configSetName": "{{ item2.configSetName }}",
                   "currentConfigVirtualServerReferences": {{ currentConfigVirtualServerReferences | first }},
                   "deviceReference": {
-                      "link": "https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machine_id  }}"
+                      "link": "https://localhost/mgmt/shared/resolver/device-groups/cm-bigip-allBigIpDevices/devices/{{ machine_id_1  }}"
                   },
                   "applicationServiceType": "{{ item2.applicationServiceType }}",
                   "mode": "CREATE"

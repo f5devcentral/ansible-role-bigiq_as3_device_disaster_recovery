@@ -73,102 +73,164 @@
     body_format: json
   register: authtoken2
 
+- name: Check if BIG-IP {{ bigip2_target }} is reachable and we can authenticate to it
+  uri:
+    url: "https://{{ bigip2_target }}:{{ device_port }}/mgmt/shared/authn/login"
+    method: POST
+    validate_certs: no
+    body:
+      username: "{{ device_username }}"
+      password: "{{ device_password }}"
+      loginProviderName: tmos
+    body_format: json
+  register: authtoken2
+  when: 
+    - not standalone | bool
+
 - name: Confirm Proceed
   pause:
-    prompt: "\n!!! MAKE SURE YOU DID A FULL CM BACKUP BEFORE YOU PROCEED FURTHER !!!
+    prompt: "\n!!! MAKE SURE YOU DID A FULL CM BACKUP ({{ provider.server }}) BEFORE YOU PROCEED FURTHER !!!
              \n
-             \nConfirm the device {{ bigip1_target }} is correct.
-             \n
+             \nRole options:\n
+             \n  - standalone: {{ standalone }}
+             \n  - skip_add_remove_rma_device: {{ skip_add_remove_rma_device }}
+             \n  - only_app_deploy: {{ only_app_deploy }}\n
              \nSteps executed by the role:\n
-             \n1. Backup AS3 declarations and Legacy App Services from device {{ bigip1_target }} (will be saved under {{ dir_as3 }})
+             \n1. Backup AS3 declarations and Legacy App Services from device(s) (will be saved under {{ dir_as3 }})\n
              \n   -- PAUSE --\n
-             \n2. Delete the Application Services in BIG-IQ dashboard belonging to {{ bigip1_target }} (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+             \n2. Delete the Application Services in BIG-IQ dashboard belonging to the device(s) (apps won't be deleted on the BIG-IP but only on BIG-IQ)\n
              \n   -- PAUSE --\n
-             \n3. Remove the device {{ bigip1_target }} from BIG-IQ
-             \n4. Add back the device {{ bigip1_target }} in BIG-IQ
+             \n3. Remove and Re-add the device(s) from BIG-IQ\n
              \n   -- PAUSE --\n
-             \n5. Re-deploy the AS3 and Legacy Application Services to {{ bigip1_target }} (no service impact)\n
+             \n4. Re-deploy all AS3 and Legacy Application Services to {{ bigip1_target }} ONLY (no service impact)\n
              \nNote: All app services custom roles will be removed in BIG-IQ.
              \nYou will need to manually re-assign those to the users (if any assigned to it) after the role is completed.
              \n\nDo you want to proceed? (yes/no)"
   register: confirm_proceed
 
-- name: Check user input
+- name: Check user input Step 1
   fail:
     msg: "Operation aborted."
   when: not confirm_proceed.user_input | bool
 
-#1. Backup AS3 declarations from device {{ bigip1_target }} 
-- name: Step 1 - Backup device AS3 declarations and existing previous 
-  include_tasks: "backup-apps.yaml"
+#1. Backup AS3 declarations from devices bigip1_target and bigip2_target
+- name: Step 1 - Backup device AS3 declarations (HA use case)
+  include_tasks: "backup-apps-cluster.yaml"
+  when:
+    - not only_app_deploy | bool
+    - not standalone | bool
+
+#1. Backup AS3 declarations from device bigip1_target
+- name: Step 1 - Backup device AS3 declarations and existing previous (Standalone use case)
+  include_tasks: "backup-apps-standalone.yaml"
+  when:
+    - not only_app_deploy | bool
+    - standalone | bool
 
 - name: Confirm Proceed Step 2
   pause:
     prompt: "\nConfirm proceed step 2 (delete the Application Services on BIG-IQ dashboard only, not on BIG-IP)? (yes/no)"
   register: confirm_proceed2
-
-- name: Check user input
+  when:
+    - not only_app_deploy | bool
+    
+- name: Check user input Step 2
   fail:
     msg: "Existing..."
-  when: not confirm_proceed2.user_input | bool
+  when:
+    - not only_app_deploy
+    - not confirm_proceed2.user_input | bool
 
 #2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-- name: Step 2 - Force-Delete Application Services
+- name: Step 2 - Force-Delete Application Services bigip1_target
   block:
-  - name: Force-Delete Application Services in {{ bigip1_target }}
+  - name: Force-Delete Application Services in bigip1_target
     include_tasks: "force-delete-apps-device.yaml"
-    with_items: "{{ configSets }}"
+    with_items: "{{ configSets_bigip1 }}"
     loop_control:
       loop_var: item1
   rescue:
   # BIQPROJ-26703
-  - name: Unpin slCertReferences and sslKeyReferences LTM objects from {{ bigip1_target }}
+  - name: Unpin slCertReferences and sslKeyReferences LTM objects from bigip1_target
     include_tasks: "delete-bigiq-pinned-objects-device.yaml"
     # After un-pin those objects, force-delete should work on remaining AS3 app
-  - name: Force-Delete Application Services in {{ bigip1_target }}
+  - name: Force-Delete Application Services in bigip1_target
     include_tasks: "force-delete-apps-device.yaml"
-    with_items: "{{ configSets }}"
+    with_items: "{{ configSets_bigip1 }}"
     loop_control:
       loop_var: item1
-  when: confirm_proceed2.user_input | bool
+  when:
+    - not only_app_deploy | bool
+    - confirm_proceed2.user_input | bool
 
-- name: Confirm Proceed Step 3 and 4
+#2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
+- name: Step 2 - Force-Delete Application Services bigip2_target (HA use case)
+  block:
+  - name: Force-Delete Application Services in bigip2_target
+    include_tasks: "force-delete-apps-device.yaml"
+    with_items: "{{ configSets_bigip2 }}"
+    loop_control:
+      loop_var: item1
+  rescue:
+  # BIQPROJ-26703
+  - name: Unpin slCertReferences and sslKeyReferences LTM objects from bigip2_target
+    include_tasks: "delete-bigiq-pinned-objects-device.yaml"
+    # After un-pin those objects, force-delete should work on remaining AS3 app
+  - name: Force-Delete Application Services in bigip2_target
+    include_tasks: "force-delete-apps-device.yaml"
+    with_items: "{{ configSets_bigip2 }}"
+    loop_control:
+      loop_var: item1
+  when:
+    - not only_app_deploy | bool
+    - not standalone | bool
+    - confirm_proceed2.user_input | bool
+
+- name: Confirm Proceed Step 3
   pause:
-    prompt: "\nConfirm proceed step 3 and 4 (remove and add the device {{ bigip1_target }})? (yes/no)"
+    prompt: "\nConfirm proceed step 3 (remove and add the device(s))? (yes/no)"
   register: confirm_proceed3
+  when:
+    - not only_app_deploy | bool
 
-- name: Check user input
+- name: Check user input Step 3
   fail:
     msg: "Existing..."
-  when:  not confirm_proceed3.user_input | bool
+  when:
+    - not only_app_deploy | bool
+    - not confirm_proceed3.user_input | bool
 
-# 3. and 4. Remove and Add the device {{ bigip1_target }} from BIG-IQ
-- name: Step 3 and 4 Remove and add the device {{ bigip1_target }} from BIG-IQ (HA use case)
-  include_tasks: "bigiq_device_discovery_cluster.yaml"
+# 3. Remove and Add the device from BIG-IQ
+- name: Step 3 Remove and add the devices bigip1_target and bigip2_target from BIG-IQ (HA use case)
+  include_tasks: "bigiq-device-discovery-cluster.yaml"
   when: 
-    - not skip_add_remove_rma_device
+    - not skip_add_remove_rma_device | bool
+    - not only_app_deploy | bool
     - not standalone | bool
     - confirm_proceed3.user_input | bool
 
-# 3. and 4. Remove and Add the device {{ bigip1_target }} from BIG-IQ
-- name: Step 3 and 4 Remove and add the device {{ bigip1_target }} from BIG-IQ (Standalone use case)
-  include_tasks: "bigiq_device_discovery_standalone.yaml"
+# 3. Remove and Add the devices from BIG-IQ
+- name: Step 3 Remove and add the device bigip1_target from BIG-IQ (Standalone use case)
+  include_tasks: "bigiq-device-discovery-standalone.yaml"
   when: 
-    - not skip_add_remove_rma_device
+    - not skip_add_remove_rma_device | bool
+    - not only_app_deploy | bool
     - standalone | bool
     - confirm_proceed3.user_input | bool
 
-- name: Confirm Proceed Step 5
+- name: Confirm Proceed Step 4
   pause:
-    prompt: "\nConfirm proceed step 5 (re-deploy the AS3 and Legacy Application Services on {{ bigip1_target }})? (yes/no)"
+    prompt: "\nConfirm proceed step 4 (re-deploy the AS3 and Legacy Application Services on {{ bigip1_target }})? (yes/no)"
   register: confirm_proceed4
-
-- fail:
+    
+- name: Check user input Step 4
+  fail:
     msg: "Existing..."
-  when: not confirm_proceed4.user_input | bool
+  when:
+    - not confirm_proceed4.user_input | bool
 
-# 5. Re-deploy the AS3 application services on {{ bigip1_target }} (no service impact)
-- name: ATC POST - deploy to {{ bigip1_target }} # Post AS3 declaration to new device using atc_deploy
+# 4. Re-deploy the AS3 application services on bigip1_target (no service impact)
+- name: ATC POST - deploy to {{ bigip1_target }} - HA and Standalone use cases # Post AS3 declaration to new device using atc_deploy
   include_role:
     name: f5devcentral.atc_deploy
   vars:
@@ -181,18 +243,70 @@
   when: 
     - confirm_proceed4.user_input | bool
 
-- name: Service Catalog and Legacy App service use cases
+### IT SOUNDS LIKE THE AS3 DECLARATIONS ARE STORED ON BOTH TARGET PART OF THE CLUSTER AUTOMATICALLY
+# - name: ATC POST - deploy to {{ bigip1_target }} - HA use cases (in case this cluster had apps deployed on both device, we re-create the app only on bigip1_target) # Post AS3 declaration to new device using atc_deploy
+#   include_role:
+#     name: f5devcentral.atc_deploy
+#   vars:
+#     atc_service: AS3
+#     atc_method: POST
+#     atc_declaration_file: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
+#     atc_delay: 30
+#     atc_retries: 30
+#   register: atc_AS3_status
+#   when: 
+#     - not standalone | bool
+#     - confirm_proceed4.user_input | bool
+
+
+# In case only_app_deploy: true, load existing app backup/json files
+- name: Load configSets_bigip1 file
+  set_fact:
+    configSets_bigip1: "{{ lookup('file', path_configSets_bigip1_file) }}"
+  vars:
+    path_configSets_bigip1_file: "{{ dir_as3 }}/{{ bigip1_target }}_bigiq_configSets.json"
+  when:
+    - only_app_deploy | bool
+
+- name: Load configSets_bigip2 file
+  set_fact:
+    configSets_bigip2: "{{ lookup('file', path_configSets_bigip2_file) }}"
+  vars:
+    path_configSets_bigip2_file: "{{ dir_as3 }}/{{ bigip2_target }}_bigiq_configSets.json"
+  when:
+    - only_app_deploy | bool
+    - not standalone | bool
+
+- name: Service Catalog and Legacy App service use cases - from bigip1_target
   include_tasks: "service-catalog-and-legacy-apps.yaml"
-  with_items: "{{ configSets }}"
+  with_items: "{{ configSets_bigip1 }}"
   loop_control:
     loop_var: item2
 
-- name: Move AS3 application service(s) in BIG-IQ application dashboard.
+- name: Service Catalog and Legacy App service use cases - from bigip2_target
+  include_tasks: "service-catalog-and-legacy-apps.yaml"
+  with_items: "{{ configSets_bigip2 }}"
+  loop_control:
+    loop_var: item2
+  when: 
+    - not standalone | bool
+
+- name: Move AS3 application service(s) in BIG-IQ application dashboard - from bigip1_target
   include_tasks: "move-app-services.yaml"
-  with_items: "{{ configSets }}"
+  with_items: "{{ configSets_bigip1 }}"
   loop_control:
     loop_var: item3
-  when: confirm_proceed4.user_input | bool
+  when: 
+    - confirm_proceed4.user_input | bool
+
+- name: Move AS3 application service(s) in BIG-IQ application dashboard - from bigip2_target
+  include_tasks: "move-app-services.yaml"
+  with_items: "{{ configSets_bigip2 }}"
+  loop_control:
+    loop_var: item3
+  when: 
+    - not standalone | bool
+    - confirm_proceed4.user_input | bool
 
 ## SHOW any service catalog template removed which needs to be re-created manually
 - name: App services deployed with Service Catalog templates removed which needs to be re-created manually on the BIG-IQ as Legacy App Services

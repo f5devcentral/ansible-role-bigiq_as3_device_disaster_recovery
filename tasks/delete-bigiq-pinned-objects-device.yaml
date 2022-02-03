@@ -2,7 +2,7 @@
 # Get device under Pinning Policy
 - name: Get existing objects pinned on the device - LTM only
   uri:
-    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node?$filter=deviceReference.machineId%20eq%20'{{ machine_id }}'"
+    url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/adc-core/working-config/root-node?$filter=deviceReference.machineId%20eq%20'{{ machine_id_1 }}'"
     method: GET
     timeout: "{{ timeout }}"
     validate_certs: "{{ provider.validate_certs }}"

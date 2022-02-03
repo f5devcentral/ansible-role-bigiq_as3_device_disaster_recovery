@@ -84,7 +84,7 @@
 - debug:
     var: apps_all
 
-- name: Save output in a file ALL declarations stored on BIG-IQ
+- name: Save output in a file app mapping on BIG-IQ if files doesn't exist
   lineinfile:
     create: yes
     path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"
@@ -92,7 +92,7 @@
   delegate_to: localhost
   when: not file_exist_apps.stat.exists
 
-- name: Save output in a file ALL declarations stored on BIG-IQ
+- name: Save output in a file ALL declarations stored on BIG-IQ if files does exist (append)
   copy: 
     content: "{{ apps_all | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_apps_mapping.json"

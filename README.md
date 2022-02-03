@@ -9,13 +9,12 @@ The role is relevant in the following cases:
 Steps executed by the ansible galaxy role automatically: *(role will pause between each step)*
 1. Backup AS3 declarations and Legacy App Services from the device specified
 2. Delete the Application Services in BIG-IQ dashboard belonging to the device specified (app services won't be deleted on the BIG-IP but only on BIG-IQ from the Application Tab)
-3. Remove the device specified from BIG-IQ
-4. Re-discover and re-import the device specified in BIG-IQ
-5. Re-deploy the AS3 and Legacy application services on the device (no service impact)
+3. Remove and Re-add device(s) specified from BIG-IQ
+4. Re-deploy the AS3 and Legacy application services on the device (no service impact)
 
 # Prerequisites
 
-- Make sure device part of the same cluster can be successfully discovered and imported in BIG-IQ
+- Make sure devices part of the same cluster can be successfully discovered and imported in BIG-IQ
 - In the case of RMA, make sure the device has been replaced before running this role and is up and running, HA cluster sync
 - Install the following galaxy roles:
   - ``ansible-galaxy install f5devcentral.atc_deploy --force``
@@ -33,7 +32,7 @@ You may not use this role if you are in this case. If you are interested to supp
 
 # Notes
 
-- The application services will be re-deploy on ``bigip1_target`` (step 5).
+- The application services will be re-deploy on ``bigip1_target`` (step 4).
 - During the first step where the config is backup, the role backup both AS3 declaration using target for both devices (HA use case only).
 - The Analytics history on BIG-IQ for this device won't be lost but BIG-IQ won't collect analytics when the device is removed then re-added to the BIG-IQ.
 - The re-discover & re-import of the device specified will use the following conflict resolution policy **Use BIG-IP** by default.
@@ -69,8 +68,11 @@ If the device is not part of a HA cluster, set ``standalone`` to ``true`` and do
 
       standalone: false # Set to true if device is standalone or part of an HA cluster
 
-      # Skip step 3 and 4 (add and remove BIG-IP device)
+      # Skip step 3 (add and remove BIG-IP device)
       skip_add_remove_rma_device: false
+
+      # Skip step 1, 2 and 3 (use current backup files)
+      only_app_deploy: false # skip step 1, 2 and 3
 
       # Conflict resolution options
       conflict_policy: use_bigip
