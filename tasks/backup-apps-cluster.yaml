@@ -95,43 +95,6 @@
     query: "json[?target.address=='{{ bigip2_target }}']"
   delegate_to: localhost
   when: json_response1.json.class is not defined
-
-#### Replace bigip2_target with bigip1_target in AS3 declaration using bigip2_target as target
-- name: Check that the {{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json exists
-  stat:
-    path: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-  delegate_to: localhost
-  register: file_exist_as3_apps_new_target
-
-- name: Backup the file is it exist already 
-  copy:
-    src: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json.bkp.{{ ansible_date_time.iso8601 }}"
-  delegate_to: localhost
-  when: file_exist_as3_apps_new_target.stat.exists
-
-- name: Make a copy of previous file to {{ dir_as3 }}/{{ bigip2_target }} if already exist
-  copy:
-    src: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
-    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-  delegate_to: localhost
-  when: not standalone | bool
-
-- name: Remove BIG-IQ id
-  lineinfile: 
-    dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-    state: absent 
-    regexp: '^    "id":'
-  delegate_to: localhost
-  when: not standalone | bool
-
-- name: Replace target BIG-IP with new target {{ bigip1_target }}
-  lineinfile:
-    path: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-    regexp: '^        "address":'
-    line: '        "address": "{{ bigip1_target }}"'
-  delegate_to: localhost
-  when: not standalone | bool
   
 ### Get Config Set bigip1
 - name: Get machineId of the device
@@ -271,13 +234,6 @@
     classicConfigs_bigip1: "{{ json_response4 | json_query(query) }}"
   vars: 
     query: "json.items[*]"
-
-# - name: Get classicConfigs and applicationReference in config-sets
-#   debug:
-#     msg: "{{ item5.name }} located in {{ item5.currentConfigVirtualServerReferences }} (VIP reference)"
-#   with_items: "{{ classicConfigs_bigip1 }}"
-#   loop_control:
-#     loop_var: item5
 
 ##### Backup Legacy App bigip1
 - name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists

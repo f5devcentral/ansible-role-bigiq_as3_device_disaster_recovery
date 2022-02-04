@@ -54,21 +54,26 @@
     var: access_group_name
   when: apm is defined
 
-# 3. Remove the device {{ bigip1_target }} from BIG-IQ
+# 3. A - Remove the devices from BIG-IQ
 - name: Step 3 A - Remove discovered device {{ bigip1_target }} and its config
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip1_target }}"
     state: absent
     provider: "{{ provider }}"
+  ignore_errors: yes
 
-# 3. Remove the device {{ bigip2_target }} from BIG-IQ
 - name: Step 3 A - Remove discovered device {{ bigip2_target }} and its config
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip2_target }}"
     state: absent
     provider: "{{ provider }}"
+  ignore_errors: yes
 
-# 4. Add back the device {{ bigip1_target }} in BIG-IQ
+- name: Exterminate mankind
+  pause:
+    prompt: Please confirm you want to exterminate mankind! Press return to continue... but really check the devices have been removed successfully.
+
+# 3. B - Add back the device {{ bigip1_target }} in BIG-IQ
 - name: Step 3 B - Add back the device {{ bigip1_target }} and its config - HA cluster (no APM)
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip1_target }}"

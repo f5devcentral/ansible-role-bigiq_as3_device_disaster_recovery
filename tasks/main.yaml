@@ -242,24 +242,9 @@
   register: atc_AS3_status
   when: 
     - confirm_proceed4.user_input | bool
+  ignore_errors: yes # what if there are no AS3 apps but only legacy?
 
-### IT SOUNDS LIKE THE AS3 DECLARATIONS ARE STORED ON BOTH TARGET PART OF THE CLUSTER AUTOMATICALLY
-# - name: ATC POST - deploy to {{ bigip1_target }} - HA use cases (in case this cluster had apps deployed on both device, we re-create the app only on bigip1_target) # Post AS3 declaration to new device using atc_deploy
-#   include_role:
-#     name: f5devcentral.atc_deploy
-#   vars:
-#     atc_service: AS3
-#     atc_method: POST
-#     atc_declaration_file: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps_with_new_target_{{ bigip1_target }}.json"
-#     atc_delay: 30
-#     atc_retries: 30
-#   register: atc_AS3_status
-#   when: 
-#     - not standalone | bool
-#     - confirm_proceed4.user_input | bool
-
-
-# In case only_app_deploy: true, load existing app backup/json files
+# In case only_app_deploy: true, load existing app backup/json configSets file(s)
 - name: Load configSets_bigip1 file
   set_fact:
     configSets_bigip1: "{{ lookup('file', path_configSets_bigip1_file) }}"
@@ -267,6 +252,7 @@
     path_configSets_bigip1_file: "{{ dir_as3 }}/{{ bigip1_target }}_bigiq_configSets.json"
   when:
     - only_app_deploy | bool
+  ignore_errors: yes # what if there are nothing in config set bigip1 but only bigip2?
 
 - name: Load configSets_bigip2 file
   set_fact:
@@ -276,6 +262,17 @@
   when:
     - only_app_deploy | bool
     - not standalone | bool
+  ignore_errors: yes # what if there are nothing in config set bigip2 but only bigip1?
+
+# In case only_app_deploy: true, load existing app backup/json classicConfigs file (bigip1)
+- name: Load classicConfigs_bigip1 file
+  set_fact:
+    classicConfigs_bigip1: "{{ lookup('file', path_classicConfigs_bigip1_file) }}"
+  vars:
+    path_classicConfigs_bigip1_file: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_legacy_apps.json"
+  when:
+    - only_app_deploy | bool
+  ignore_errors: yes # what if there are no legacy config?
 
 - name: Service Catalog and Legacy App service use cases - from bigip1_target
   include_tasks: "service-catalog-and-legacy-apps.yaml"
@@ -308,7 +305,7 @@
     - not standalone | bool
     - confirm_proceed4.user_input | bool
 
-## SHOW any service catalog template removed which needs to be re-created manually
+## Show any service catalog template removed which needs to be re-created manually
 - name: App services deployed with Service Catalog templates removed which needs to be re-created manually on the BIG-IQ as Legacy App Services
   debug:
     msg:
