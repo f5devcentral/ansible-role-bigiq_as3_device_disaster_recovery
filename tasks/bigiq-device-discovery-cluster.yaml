@@ -71,7 +71,7 @@
 
 - name: Exterminate mankind
   pause:
-    prompt: Please confirm you want to exterminate mankind! Press return to continue... but really check the devices have been removed successfully.
+    prompt: Please confirm you want to exterminate mankind! Press return to continue... but really check the devices have been removed successfully
 
 # 3. B - Add back the device {{ bigip1_target }} in BIG-IQ
 - name: Step 3 B - Add back the device {{ bigip1_target }} and its config - HA cluster (no APM)
@@ -95,7 +95,7 @@
   when: apm is not defined
   ignore_errors: yes
 
-- name: Step 3 B - Re-discover the device {{ bigip2_target }} and its config - HA cluster (no APM)
+- name: Step 3 B - Add back the device {{ bigip2_target }} and its config - HA cluster (no APM)
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip2_target }}"
     device_port: "{{ device_port }}"
@@ -141,7 +141,7 @@
   when: apm is defined
   ignore_errors: yes
 
-- name: Step 3 B - Re-discover the device {{ bigip2_target }} and its config - HA cluster with APM
+- name: Step 3 B - Add back the device {{ bigip2_target }} and its config - HA cluster with APM
   f5networks.f5_modules.bigiq_device_discovery:
     device_address: "{{ bigip2_target }}"
     device_port: "{{ device_port }}"

@@ -64,7 +64,7 @@
 
 - name: Exterminate mankind
   pause:
-    prompt: Please confirm you want to exterminate mankind! Press return to continue ... but really check the device has been removed successfully.
+    prompt: Please confirm you want to exterminate mankind! Press return to continue ... but really check the device has been removed successfully
 
 # 3. B - Add back the device {{ bigip1_target }} in BIG-IQ
 - name: Step 3 B - Add back the device {{ bigip1_target }} and its config - Standalone (no APM)
