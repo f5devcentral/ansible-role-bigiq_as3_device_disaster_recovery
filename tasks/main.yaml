@@ -3,15 +3,123 @@
   set_fact:
     provider: "{{ provider }}"
 
+### Ask for BIG-IQ Credentials if not specified in the playbook
+
+- pause:
+    prompt: |
+            ========================================================================================================
+            Provide the BIG-IQ username
+
+            ========================================================================================================
+  register: bigiq_username
+  when: 
+    - provider.user is undefined
+
+- name: Set BIG-IQ username
+  ansible.utils.update_fact:
+    updates:
+    - path: provider['user']
+      value: "{{ bigiq_username.user_input }}"
+  register: updated_provider
+  when: 
+    - provider.user is undefined
+
+- name: Update provider and variable
+  set_fact:
+    provider: "{{ updated_provider.provider }}"
+  when: 
+    - provider.user is undefined
+
+- pause:
+    prompt: |
+            ========================================================================================================
+            Provide the BIG-IQ password
+
+            ========================================================================================================
+    echo: no
+  no_log: True
+  register: bigiq_password
+  when: 
+    - provider.password is undefined
+
+- name: Set BIG-IQ password
+  ansible.utils.update_fact:
+    updates:
+    - path: provider['password']
+      value: "{{ bigiq_password.user_input }}"
+  no_log: True
+  register: updated_provider
+  when: 
+    - provider.password is undefined
+
+- name: Update provider and variable
+  set_fact:
+    provider: "{{ updated_provider.provider }}"
+  when: 
+    - provider.password is undefined
+
+### Ask for BIG-IP Credentials if not specified in the playbook
+
+- pause:
+    prompt: |
+            ========================================================================================================
+            Provide the BIG-IP username
+
+            ========================================================================================================
+  register: bigip_username
+  when: 
+    - device_username is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
+
+- name: Set BIG-IP username
+  set_fact:
+    device_username: "{{ bigip_username.user_input }}"
+  when: 
+    - device_username is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
+
+- pause:
+    prompt: |
+            ========================================================================================================
+            Provide the BIG-IP password
+
+            ========================================================================================================
+    echo: no
+  no_log: True
+  register: bigip_password
+  when: 
+    - device_password is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
+
+- name: Set BIG-IP password
+  set_fact:
+    device_password: "{{ bigip_password.user_input }}"
+  when: 
+    - device_password is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
+
+# - debug:
+#     var: provider
+
 - name: Verify BIG-IP device_username properly set
   fail:
     msg: "The variable 'device_username' is not defined"
-  when: device_username is undefined
+  when: 
+    - device_username is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
 
 - name: Verify BIG-IP device_password properly set
   fail:
     msg: "The variable 'device_password' is not defined"
-  when: device_password is undefined
+  when: 
+    - device_password is undefined
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
 
 - name: Verify dir_as3 properly set
   fail:
@@ -72,6 +180,9 @@
       loginProviderName: tmos
     body_format: json
   register: authtoken2
+  when:
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
 
 - name: Check if BIG-IP {{ bigip2_target }} is reachable and we can authenticate to it
   uri:
@@ -86,6 +197,8 @@
   register: authtoken2
   when: 
     - not standalone | bool
+    - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
 
 - name: Confirm Proceed
   pause:

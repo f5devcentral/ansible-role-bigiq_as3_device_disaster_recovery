@@ -76,7 +76,7 @@
 
 #### Backup bigip1_target
 # Backup declaration from device if BIG-IQ has more than 1 device
-- name: Save output in a file {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json - More than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json - device 1
   copy:
     content: "{{ json_response1 | json_query(query) | first | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
@@ -84,10 +84,11 @@
     query: "json[?target.address=='{{ bigip1_target }}']"
   delegate_to: localhost
   when: json_response1.json.class is not defined
+  ignore_errors: yes # ignore in case no apps are found on this target
 
 #### Backup bigip2_target
 # Backup declaration from device if BIG-IQ has more than 1 device
-- name: Save output in a file {{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json - More than 1 device
+- name: Save output in a file {{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json - device 2
   copy:
     content: "{{ json_response1 | json_query(query) | first | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ bigip2_target }}_bigip_as3_apps.json"
@@ -95,6 +96,7 @@
     query: "json[?target.address=='{{ bigip2_target }}']"
   delegate_to: localhost
   when: json_response1.json.class is not defined
+  ignore_errors: yes # ignore in case no apps are found on this target
   
 ### Get Config Set bigip1
 - name: Get machineId of the device
