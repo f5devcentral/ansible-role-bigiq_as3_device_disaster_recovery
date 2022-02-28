@@ -132,12 +132,12 @@
   vars: 
     query: "json.items[*]"
 
-- name: Get configSetName and applicationReference in config-sets
-  debug:
-    msg: "{{ item4.configSetName }} located in {{ item4.applicationReference }} (Global app reference)"
-  with_items: "{{ configSets_bigip1 }}"
-  loop_control:
-    loop_var: item4
+# - name: Get configSetName and applicationReference in config-sets
+#   debug:
+#     msg: "{{ item4.configSetName }} located in {{ item4.applicationReference }} (Global app reference)"
+#   with_items: "{{ configSets_bigip1 }}"
+#   loop_control:
+#     loop_var: item4
 
 ##### Backup configSets bigip1
 - name: Check that the {{ dir_as3 }}/{{ bigip1_target }}.json exists
@@ -193,12 +193,12 @@
   vars: 
     query: "json.items[*]"
 
-- name: Get configSetName and applicationReference in config-sets
-  debug:
-    msg: "{{ item4.configSetName }} located in {{ item4.applicationReference }} (Global app reference)"
-  with_items: "{{ configSets_bigip2 }}"
-  loop_control:
-    loop_var: item4
+# - name: Get configSetName and applicationReference in config-sets
+#   debug:
+#     msg: "{{ item4.configSetName }} located in {{ item4.applicationReference }} (Global app reference)"
+#   with_items: "{{ configSets_bigip2 }}"
+#   loop_control:
+#     loop_var: item4
 
 ##### Backup configSets bigip2
 - name: Check that the {{ dir_as3 }}/{{ bigip1_target }}.json exists

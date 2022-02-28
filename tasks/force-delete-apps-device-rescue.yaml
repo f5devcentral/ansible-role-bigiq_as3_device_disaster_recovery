@@ -37,7 +37,7 @@
   register: json_response
   when: configSetName_exist | length > 0
 
-- name: Check Force-Delete status
+- name: Check Force-Delete status Rescue
   uri:
     url: "https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/tasks/force-delete/{{ json_response.json.id }}"
     timeout: "{{ timeout }}"
@@ -49,13 +49,25 @@
   until: status.json.status in ['FINISHED', 'FAILED']
   retries: 40
   delay: 10
-  failed_when: "'FAILED' in status.json.status"
-  changed_when: "'FINISHED' in status.json.status"
-  when: configSetName_exist | length > 0
+  ignore_errors: yes # we ignore if failed the 2nd time, log it and continue with the next one
+  when: 
+    - configSetName_exist | length > 0
+
+- debug:
+    var: status.json
+  when: status.json.status == 'FAILED'
 
 - name: Save in a file the name of the configSet
   lineinfile:
-    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_force-delete_1st_attempt_succeed.txt"
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_force-delete_2nd_attempt_failed.txt"
+    line: "{{ item1.configSetName }}"
+    create: yes
+  delegate_to: localhost
+  when: status.json.status == 'FAILED'
+
+- name: Save in a file the name of the configSet
+  lineinfile:
+    path: "{{ dir_as3 }}/{{ provider.server }}_bigiq_force-delete_2nd_attempt_succeed.txt"
     line: "{{ item1.configSetName }}"
     create: yes
   delegate_to: localhost

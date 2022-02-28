@@ -45,4 +45,4 @@
 - name: Check if both BIG-IP devices belong to the same cluster
   fail:
     msg: "{{ bigip1_target }} must be in the same cluster on BIG-IQ as {{ bigip2_target }}"
-  when:  clusterName_device1 != clusterName_device2
+  when: clusterName_device1 != clusterName_device2

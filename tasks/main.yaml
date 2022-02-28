@@ -255,7 +255,7 @@
     - not confirm_proceed2.user_input | bool
 
 #2. Delete the AS3 application services on BIG-IQ dashboard (apps won't be deleted on the BIG-IP but only on BIG-IQ)
-- name: Step 2 - Force-Delete Application Services bigip1_target
+- name: Step 2 - Force-Delete Application Services bigip1_target (standalone use case)
   block:
   - name: Force-Delete Application Services in bigip1_target
     include_tasks: "force-delete-apps-device.yaml"
@@ -268,7 +268,7 @@
     include_tasks: "delete-bigiq-pinned-objects-device.yaml"
     # After un-pin those objects, force-delete should work on remaining AS3 app
   - name: Force-Delete Application Services in bigip1_target
-    include_tasks: "force-delete-apps-device.yaml"
+    include_tasks: "force-delete-apps-device-rescue.yaml"
     with_items: "{{ configSets_bigip1 }}"
     loop_control:
       loop_var: item1
@@ -290,7 +290,7 @@
     include_tasks: "delete-bigiq-pinned-objects-device.yaml"
     # After un-pin those objects, force-delete should work on remaining AS3 app
   - name: Force-Delete Application Services in bigip2_target
-    include_tasks: "force-delete-apps-device.yaml"
+    include_tasks: "force-delete-apps-device-rescue.yaml"
     with_items: "{{ configSets_bigip2 }}"
     loop_control:
       loop_var: item1
