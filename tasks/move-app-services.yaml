@@ -36,7 +36,7 @@
   vars:
       apps: 
       - name: "{{ bigiq_global_app }}"
-        pins: 
+        pin: 
           - name: "{{ app_service_name }}"
   register: status
   when: item3.templateReference is not defined # for now, just ignore service catalog
@@ -56,7 +56,7 @@
 # Backup Global Apps
 - name: Load bigiq_apps_mapping file if it exists already 
   set_fact:
-    apps_current_item: '[{"name":"{{ bigiq_global_app }}","pins":[{"name":"{{ app_service_name }}"}]}]'
+    apps_current_item: '[{"name":"{{ bigiq_global_app }}","pin":[{"name":"{{ app_service_name }}"}]}]'
 
 - debug:
     var: apps_current_item
