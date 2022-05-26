@@ -72,7 +72,9 @@
     content: "{{ json_response1.json | to_nice_json }}"
     dest: "{{ dir_as3 }}/{{ provider.server }}_bigiq_all_as3_apps.json"
   delegate_to: localhost
-  when: not file_exist_all.stat.exists
+  when: 
+    - not file_exist_all.stat.exists
+    - json_response1 | bool
 
 #### Backup bigip1_target
 # Backup declaration from device if BIG-IQ has more than 1 device

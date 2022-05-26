@@ -305,12 +305,14 @@
   register: confirm_proceed3
   when:
     - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
 
 - name: Check user input Step 3
   fail:
     msg: "Existing..."
   when:
     - not only_app_deploy | bool
+    - not skip_add_remove_rma_device | bool
     - not confirm_proceed3.user_input | bool
 
 # 3. Remove and Add the device from BIG-IQ
@@ -343,6 +345,11 @@
     - not confirm_proceed4.user_input | bool
 
 # 4. Re-deploy the AS3 application services on bigip1_target (no service impact)
+- name: Check that the {{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json exists # what if there are no AS3 apps but only legacy?
+  stat:
+    path: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_as3_apps.json"
+  register: bigip_as3_apps_file_exist
+
 - name: ATC POST - deploy to {{ bigip1_target }} - HA and Standalone use cases # Post AS3 declaration to new device using atc_deploy
   include_role:
     name: f5devcentral.atc_deploy
@@ -355,7 +362,8 @@
   register: atc_AS3_status
   when: 
     - confirm_proceed4.user_input | bool
-  ignore_errors: yes # what if there are no AS3 apps but only legacy?
+    - bigip_as3_apps_file_exist.stat.exists
+  ignore_errors: yes # if something fails with AS3, lets continue and try to do legacy
 
 # In case only_app_deploy: true, load existing app backup/json configSets file(s)
 - name: Load configSets_bigip1 file
@@ -378,6 +386,11 @@
   ignore_errors: yes # what if there are nothing in config set bigip2 but only bigip1?
 
 # In case only_app_deploy: true, load existing app backup/json classicConfigs file (bigip1)
+- name: Check that the {{ dir_as3 }}/{{ bigip1_target }}_bigip_legacy_apps.json exists # what if there are no legacy config?
+  stat:
+    path: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_legacy_apps.json"
+  register: bigip_legacy_apps_file_exist
+
 - name: Load classicConfigs_bigip1 file
   set_fact:
     classicConfigs_bigip1: "{{ lookup('file', path_classicConfigs_bigip1_file) }}"
@@ -385,7 +398,8 @@
     path_classicConfigs_bigip1_file: "{{ dir_as3 }}/{{ bigip1_target }}_bigip_legacy_apps.json"
   when:
     - only_app_deploy | bool
-  ignore_errors: yes # what if there are no legacy config?
+    - bigip_legacy_apps_file_exist.stat.exists
+  ignore_errors: yes # if something fails with legacy, lets continue ...
 
 - name: Service Catalog and Legacy App service use cases - from bigip1_target
   include_tasks: "service-catalog-and-legacy-apps.yaml"
