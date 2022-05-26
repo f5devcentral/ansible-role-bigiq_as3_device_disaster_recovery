@@ -74,7 +74,7 @@
   delegate_to: localhost
   when: 
     - not file_exist_all.stat.exists
-    - json_response1 | bool
+    - json_response1 is defined
 
 #### Backup bigip1_target
 # Backup declaration from device if BIG-IQ has more than 1 device
