@@ -54,6 +54,9 @@
     status_code: 200, 202, 204
   register: json_response1
 
+# - debug:
+#     var: json_response1
+
 ##### Backup ALL AS3 declarations from BIG-IQ
 - name: Check that the {{ dir_as3 }}/{{ provider.server }}.json exists
   stat:
@@ -74,7 +77,7 @@
   delegate_to: localhost
   when: 
     - not file_exist_all.stat.exists
-    - json_response1 is defined
+    - json_response1.status == "204" # ignore if no AS3 apps
 
 #### Backup bigip1_target
 # Backup declaration from device if BIG-IQ has more than 1 device
