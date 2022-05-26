@@ -51,7 +51,7 @@
     validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
-    status_code: 200, 202
+    status_code: 200, 202, 204
   register: json_response1
 
 ##### Backup ALL AS3 declarations from BIG-IQ
@@ -123,7 +123,7 @@
     validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
-    status_code: 200, 202
+    status_code: 200, 202, 204
   register: json_response3
 
 - name: Get config-sets for {{ bigip1_target }}
@@ -184,7 +184,7 @@
     validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
-    status_code: 200, 202
+    status_code: 200, 202, 204
   register: json_response3
 
 - name: Get config-sets for {{ bigip2_target }}
@@ -228,7 +228,7 @@
     validate_certs: "{{ provider.validate_certs }}"
     headers:
       X-F5-Auth-Token: "{{ f5_auth_token }}"
-    status_code: 200, 202
+    status_code: 200, 202, 204
   register: json_response4
 
 - name: Get classic-configs for {{ bigip1_target }}
