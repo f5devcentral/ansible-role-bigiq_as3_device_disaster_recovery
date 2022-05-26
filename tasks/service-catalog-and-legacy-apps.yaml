@@ -1,4 +1,7 @@
 ---
+- name: Re authenticate to BIG-IQ
+  include_tasks: authentication.yaml
+
 #### If Legacy => Re-create Legacy App
 - name: Get currentConfigVirtualServerReferences from classicConfigs_bigip1
   set_fact:

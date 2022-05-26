@@ -1,4 +1,7 @@
 ---
+- name: Re authenticate to BIG-IQ
+  include_tasks: authentication.yaml
+
 # Pre-step
 - name: Pre-Step 3 - Collect device info {{ bigip1_target }}
   uri:

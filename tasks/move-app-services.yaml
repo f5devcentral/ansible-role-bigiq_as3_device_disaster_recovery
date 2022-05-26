@@ -1,4 +1,7 @@
 ---
+- name: Re authenticate to BIG-IQ
+  include_tasks: authentication.yaml
+  
 - name: Get global App name from applicationReference
   uri:
     url: https://{{ provider.server }}:{{ provider.server_port }}/mgmt/cm/global/global-apps/{{ item3.applicationReference.link | replace('https://localhost/mgmt/cm/global/global-apps/', '') }}
